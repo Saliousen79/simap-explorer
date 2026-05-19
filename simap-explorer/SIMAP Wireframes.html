@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SIMAP Explorer — Wireframes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #111; font-family: 'Caveat', cursive; }
+    #root { width: 100%; min-height: 100vh; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="wireframe-components.jsx"></script>
+<script type="text/babel">
+
+/* ── ANNOTATION helper ───────────────────────────────────────────────── */
+const Ann = ({children, color='#d97706'}) => (
+  <span style={{
+    fontFamily:'Caveat,cursive', fontSize:10, color,
+    background: color==='#d97706'?'#fffbeb':'#f0fdf4',
+    border:`1px dashed ${color}`, borderRadius:2,
+    padding:'1px 6px', whiteSpace:'nowrap',
+  }}>✏ {children}</span>
+);
+
+/* ══════════════════════════════════════════════════════════════════════
+   01  OVERVIEW  ──────────────────────────────────────────────────────
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* V1 – Hero-First: big splash → KPIs → charts → ticker */
+const OverviewV1 = () => (
+  <WireFrame title="Overview" activePage={0} noFilters>
+    {/* Hero */}
+    <WireCard style={{minHeight:88, border:`1.5px dashed ${WC.accent}`, background:WC.fillBlue, flexShrink:0}}>
+      <div style={{display:'flex', alignItems:'center', gap:24, flex:1}}>
+        <div style={{flex:1}}>
+          <div style={{fontFamily:'Space Mono,monospace', fontSize:20, fontWeight:700, color:WC.text, lineHeight:1.2}}>
+            200'000+ Schweizer Ausschreibungen
+          </div>
+          <div style={{fontFamily:'Caveat,cursive', fontSize:13, color:WC.muted, marginTop:4}}>
+            Swiss public procurement intelligence — SIMAP.ch
+          </div>
+          <div style={{display:'flex', gap:8, marginTop:8}}>
+            <Ann>count-up on mount</Ann>
+            <Ann color='#10b981'>pub_type filter pills here</Ann>
+          </div>
+        </div>
+        <div style={{textAlign:'right', flexShrink:0}}>
+          <div style={{fontFamily:'Space Mono,monospace', fontSize:22, fontWeight:700, color:WC.accent}}>CHF 4.8 Mrd.</div>
+          <div style={{fontFamily:'Caveat,cursive', fontSize:11, color:WC.muted}}>Total Auftragswert (award_amount)</div>
+        </div>
+      </div>
+    </WireCard>
+
+    {/* KPI row — maps to DB columns */}
+    <div style={{display:'flex', gap:8, flexShrink:0}}>
+      <WireKPI value="187'432" label="Ausschreibungen (pub_type)" delta="+8.4% YoY" sub="total"/>
+      <WireKPI value="CHF 4.8 Mrd" label="Auftragswert (award_amount)" delta="+12.1%"/>
+      <WireKPI value="Ø 3.2" label="Angebote (number_of_submissions)"/>
+      <WireKPI value="12'430" label="Auftraggeber (proc_office_id)"/>
+    </div>
+
+    {/* Charts 60/40 */}
+    <div style={{flex:1, display:'flex', gap:8, minHeight:0}}>
+      <WireCard label="Aufträge per Monat — publication_date GROUP BY month" style={{flex:'0 0 60%'}}>
+        <WireLineChart h={160} showMonths/>
+      </WireCard>
+      <WireCard label="Top 8 Kantone — SUM(award_amount) per canton" style={{flex:'0 0 40%'}}>
+        <WireBarChart h={155} horizontal bars={8}/>
+      </WireCard>
+    </div>
+
+    {/* Ticker */}
+    <WireCard label="Neueste Vergaben — latest award_decision_date DESC" style={{height:44, flexShrink:0}}>
+      <div style={{display:'flex', gap:24, alignItems:'center', overflow:'hidden'}}>
+        {['ZH: ICT-Infrastruktur · CHF 2.4M','Bern: Reinigung · CHF 890k','VD: Strassenbau · CHF 5.1M','ETH: Geräte · CHF 1.2M'].map((t,i)=>(
+          <span key={i} style={{fontFamily:'Caveat,cursive', fontSize:12, color:WC.muted, whiteSpace:'nowrap'}}>→ {t}</span>
+        ))}
+        <Ann>scrolling marquee animation</Ann>
+      </div>
+    </WireCard>
+  </WireFrame>
+);
+
+/* V2 – Data-First: expanded nav, no hero, denser 3-col grid */
+const OverviewV2 = () => (
+  <WireFrame title="Overview" activePage={0} sidebarExpanded noFilters>
+    <div style={{display:'flex', gap:8, flexShrink:0}}>
+      <WireKPI value="187k" label="Ausschreibungen" delta="+8.4%"/>
+      <WireKPI value="4.8 Mrd" label="CHF Auftragswert" delta="+12.1%"/>
+      <WireKPI value="Ø 3.2" label="Angebote / Ausschr."/>
+      <WireKPI value="12.4k" label="Auftraggeber"/>
+    </div>
+
+    {/* 3-col grid */}
+    <div style={{flex:1, display:'flex', gap:8, minHeight:0}}>
+      <WireCard label="Kantone — SUM(award_amount)" style={{flex:1}}>
+        <WireBarChart h={130} horizontal bars={8}/>
+      </WireCard>
+      <WireCard label="Ausschreibungen / Monat" style={{flex:1}}>
+        <WireLineChart h={130} showMonths/>
+      </WireCard>
+      <WireCard label="Top CPV Branchen (cpv_code_main)" style={{flex:1}}>
+        <WireBarChart h={130} horizontal bars={8} labels={['Bau','IT','Inf','Med','Ber','Plan','Tr','Öff']}/>
+      </WireCard>
+    </div>
+
+    {/* Recent awards table */}
+    <WireCard label="Neueste Vergaben — projects ORDER BY award_decision_date DESC" style={{height:195, flexShrink:0}}>
+      <WireTable rows={5} cols={['title_de','proc_office_name_de','canton','award_amount CHF','award_decision_date']}/>
+      <div style={{marginTop:6, display:'flex', justifyContent:'flex-end'}}>
+        <Ann>pagination controls</Ann>
+      </div>
+    </WireCard>
+  </WireFrame>
+);
+
+/* ══════════════════════════════════════════════════════════════════════
+   02  DASHBOARD  ─────────────────────────────────────────────────────
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* V1 – Classic Grid: filter bar → KPIs → canton bars → table + donut */
+const DashboardV1 = () => (
+  <WireFrame title="Dashboard" activePage={1}
+    filters={[{label:'2024',active:true},{label:'Alle Kantone'},{label:'Alle CPV'},{label:'Alle Verfahren'}]}>
+
+    <div style={{display:'flex', gap:8, flexShrink:0}}>
+      <WireKPI value="42'318" label="Ausschreibungen (filtered)"/>
+      <WireKPI value="CHF 1.2 Mrd" label="Auftragswert" delta="+5.2%"/>
+      <WireKPI value="Ø 2.8" label="Angebote"/>
+      <WireKPI value="3'840" label="Auftraggeber"/>
+    </div>
+
+    <WireCard label="Ausschreibungen pro Kanton — COUNT(*) GROUP BY canton" style={{height:145, flexShrink:0}}>
+      <WireBarChart h={110} bars={8}/>
+    </WireCard>
+
+    <div style={{flex:1, display:'flex', gap:8, minHeight:0}}>
+      <WireCard label="Top Gewinner — winner_name / winner_id" style={{flex:'0 0 60%'}}>
+        <WireTable rows={5} cols={['winner_name','winner_canton','Aufträge','Total CHF','Ø CHF']}/>
+        <div style={{marginTop:6}}>
+          <Ann>click row → winner detail modal</Ann>
+        </div>
+      </WireCard>
+      <WireCard label="Vergabeverfahren — process_type distribution" style={{flex:'0 0 40%', alignItems:'center', justifyContent:'center', gap:12}} row>
+        <WireDonut size={130}/>
+        <DonutLegend items={['Offen 45%','Selektiv 22%','Freihändig 18%','Einladung 15%']}/>
+      </WireCard>
+    </div>
+  </WireFrame>
+);
+
+/* V2 – Left-Panel Filters: persistent filter drawer replaces filter pills */
+const DashboardV2 = () => (
+  <div style={{width:1280, height:800, background:WC.paper, display:'flex', overflow:'hidden', border:`1px solid ${WC.border}`}}>
+    <WireSidebar expanded={false} activePage={1}/>
+
+    {/* Filter drawer */}
+    <div style={{
+      width:180, minWidth:180, height:'100%',
+      borderRight:`1.5px solid ${WC.border}`,
+      background:'#f5f5f2',
+      display:'flex', flexDirection:'column',
+      padding:'10px', gap:10, overflow:'auto',
+    }}>
+      <div style={{fontFamily:'Space Mono,monospace', fontSize:8, fontWeight:700, color:WC.muted, letterSpacing:1}}>FILTER</div>
+      {[['Jahr','2024',true],['Kanton','Alle',false],['CPV-Branche','Alle CPV',false],['Vergabetyp','Offen, Sel.',true],['Betrag','CHF 0 – ∞',false]].map(([label,val,active],i)=>(
+        <div key={i}>
+          <div style={{fontFamily:'Caveat,cursive', fontSize:10, color:WC.muted, marginBottom:2}}>{label}</div>
+          <div style={{border:`1.5px solid ${active?WC.accent:WC.border}`, borderRadius:3, padding:'3px 7px', background:WC.paper, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+            <span style={{fontFamily:'Caveat,cursive', fontSize:11, color:active?WC.accent:WC.muted}}>{val}</span>
+            <span style={{fontSize:9, color:WC.muted}}>▾</span>
+          </div>
+        </div>
+      ))}
+      <div style={{marginTop:'auto', border:`1.5px solid ${WC.border}`, borderRadius:3, padding:'4px 8px', textAlign:'center', fontFamily:'Caveat,cursive', fontSize:11, color:WC.muted}}>↺ Zurücksetzen</div>
+      <Ann>filter state persists in URL params</Ann>
+    </div>
+
+    {/* Main */}
+    <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden'}}>
+      <WireTopBar title="Dashboard" noFilters/>
+      <div style={{flex:1, padding:12, display:'flex', flexDirection:'column', gap:8, overflow:'hidden', boxSizing:'border-box'}}>
+        <div style={{display:'flex', gap:8, flexShrink:0}}>
+          <WireKPI value="42'318" label="Ausschreibungen"/>
+          <WireKPI value="CHF 1.2 Mrd" label="Auftragswert"/>
+          <WireKPI value="Ø 2.8" label="Angebote"/>
+          <WireKPI value="3'840" label="Auftraggeber"/>
+        </div>
+        <div style={{flex:1, display:'flex', gap:8, minHeight:0}}>
+          <WireCard label="Ausschreibungen / Monat" style={{flex:1}}>
+            <WireLineChart h={150} showMonths/>
+          </WireCard>
+          <WireCard label="Kantone — Auftragswert" style={{flex:1}}>
+            <WireBarChart h={150} horizontal bars={8}/>
+          </WireCard>
+        </div>
+        <WireCard label="Top Gewinner" style={{height:145, flexShrink:0}}>
+          <WireTable rows={4} cols={['winner_name','winner_canton','Aufträge','Total CHF']}/>
+        </WireCard>
+      </div>
+    </div>
+  </div>
+);
+
+/* ══════════════════════════════════════════════════════════════════════
+   03  TRENDS  ────────────────────────────────────────────────────────
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* V1 – Timeline Dominant: big chart top, two smaller below, kanton pills */
+const TrendsV1 = () => (
+  <WireFrame title="Trends" activePage={2}
+    filters={[{label:'2020–2024',active:true},{label:'Alle Kantone'},{label:'Monatlich',active:true}]}>
+
+    <WireCard label="Auftragswert — Jahrestrend (SUM award_amount GROUP BY publication_date month)" style={{height:215, flexShrink:0}}>
+      <WireLineChart h={170} showMonths/>
+      <div style={{display:'flex', gap:12, marginTop:4}}>
+        <div style={{display:'flex', alignItems:'center', gap:4}}>
+          <div style={{width:18, height:2, background:WC.accent}}/>
+          <span style={{fontFamily:'Caveat,cursive', fontSize:10, color:WC.muted}}>Auftragswert</span>
+        </div>
+        <div style={{display:'flex', alignItems:'center', gap:4}}>
+          <svg width={18} height={4}><line x1={0} y1={2} x2={18} y2={2} stroke={WC.cyan} strokeWidth="1.5" strokeDasharray="4,3"/></svg>
+          <span style={{fontFamily:'Caveat,cursive', fontSize:10, color:WC.muted}}>Ø Auftragswert</span>
+        </div>
+      </div>
+    </WireCard>
+
+    <div style={{flex:1, display:'flex', gap:8, minHeight:0}}>
+      <WireCard label="Monatliche Anzahl Ausschreibungen — COUNT(*) per month" style={{flex:1}}>
+        <WireBarChart h={110} bars={12} labels={['J','F','M','A','M','J','J','A','S','O','N','D']}/>
+      </WireCard>
+      <WireCard label="Ø Auftragswert CHF — AVG(award_amount) per month" style={{flex:1}}>
+        <WireLineChart h={110}/>
+      </WireCard>
+    </div>
+
+    <WireCard label="Kanton-Vergleich — add/remove lines per canton" style={{height:90, flexShrink:0}}>
+      <div style={{display:'flex', gap:5, flexWrap:'wrap', alignItems:'center', marginBottom:6}}>
+        {['ZH','BE','VD','AG','SG','LU','TI','VS','GR','FR','SO','BL'].map((k,i)=>(
+          <WirePill key={k} label={k} active={i<3} small/>
+        ))}
+        <WirePill label="+ Kanton" small/>
+      </div>
+      <WireLineChart h={34} multi/>
+    </WireCard>
+  </WireFrame>
+);
+
+/* V2 – Multi-Kanton Compare: selected canton cards + stacked comparison */
+const TrendsV2 = () => (
+  <WireFrame title="Trends — Kantonvergleich" activePage={2}
+    filters={[{label:'2022–2024',active:true},{label:'Quartallich',active:true}]}>
+
+    {/* Kanton selector row */}
+    <div style={{display:'flex', gap:8, flexShrink:0}}>
+      {[['ZH',WC.accent,"18'432"],['BE',WC.cyan,"9'210"],['VD',WC.green,"7'890"]].map(([k,c,v])=>(
+        <WireCard key={k} style={{flex:1, height:64, border:`1.5px solid ${c}`, justifyContent:'center'}}>
+          <div style={{display:'flex', alignItems:'baseline', gap:6}}>
+            <span style={{fontFamily:'Space Mono,monospace', fontSize:11, color:c, fontWeight:700}}>Kt. {k}</span>
+            <span style={{fontFamily:'Space Mono,monospace', fontSize:17, fontWeight:700, color:WC.text}}>{v}</span>
+            <span style={{fontFamily:'Caveat,cursive', fontSize:10, color:WC.muted}}>Ausschr.</span>
+          </div>
+          <div style={{height:1.5, background:c, marginTop:4, opacity:0.4}}/>
+          <svg width="100%" height={20} viewBox="0 0 120 20" preserveAspectRatio="none">
+            <polyline points="0,16 20,12 40,14 60,8 80,10 100,5 120,3" fill="none" stroke={c} strokeWidth="1.5"/>
+          </svg>
+        </WireCard>
+      ))}
+      <div style={{width:48, border:`1.5px dashed ${WC.border}`, borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', background:'transparent'}}>
+        <span style={{fontFamily:'Caveat,cursive', fontSize:22, color:WC.muted}}>+</span>
+      </div>
+    </div>
+
+    {/* Big comparison chart */}
+    <WireCard label="Vergleich — Ausschreibungsvolumen per Kanton (publication_date, canton)" style={{flex:'0 0 260px', flexShrink:0}}>
+      <WireLineChart h={210} multi/>
+      <div style={{display:'flex', gap:12, marginTop:4}}>
+        {[['ZH',WC.accent],['BE',WC.cyan],['VD',WC.green]].map(([k,c])=>(
+          <div key={k} style={{display:'flex', alignItems:'center', gap:4}}>
+            <div style={{width:14, height:2, background:c}}/>
+            <span style={{fontFamily:'Caveat,cursive', fontSize:10, color:WC.muted}}>{k}</span>
+          </div>
+        ))}
+      </div>
+    </WireCard>
+
+    {/* Individual sparklines */}
+    <div style={{flex:1, display:'flex', gap:8, minHeight:0}}>
+      {['ZH — Monatsverlauf','BE — Monatsverlauf','VD — Monatsverlauf'].map((lbl,i)=>(
+        <WireCard key={i} label={lbl} style={{flex:1}}>
+          <WireLineChart h={80}/>
+        </WireCard>
+      ))}
+    </div>
+  </WireFrame>
+);
+
+/* ══════════════════════════════════════════════════════════════════════
+   04  MARKT  ─────────────────────────────────────────────────────────
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* V1 – Score-First: big competition number → bars → treemap + insights */
+const MarktV1 = () => (
+  <WireFrame title="Markt" activePage={3}
+    filters={[{label:'2024',active:true},{label:'Alle CPV'},{label:'Alle Verfahren'}]}>
+
+    {/* Score cards row */}
+    <div style={{display:'flex', gap:8, height:84, flexShrink:0}}>
+      <WireCard accent style={{flex:2, justifyContent:'center'}}>
+        <div style={{fontFamily:'Space Mono,monospace', fontSize:8, color:WC.accent, fontWeight:700, letterSpacing:'1px', marginBottom:4}}>WETTBEWERBSINTENSITÄT (AVG number_of_submissions)</div>
+        <div style={{display:'flex', alignItems:'baseline', gap:8}}>
+          <span style={{fontFamily:'Space Mono,monospace', fontSize:30, fontWeight:700, color:WC.accent}}>Ø 3.2</span>
+          <span style={{fontFamily:'Caveat,cursive', fontSize:13, color:WC.muted}}>Angebote pro Ausschreibung</span>
+          <Ann>count-up animation</Ann>
+        </div>
+      </WireCard>
+      <WireCard style={{flex:1, border:`1.5px solid ${WC.red}`, background:'#fef2f2', justifyContent:'center'}}>
+        <div style={{fontFamily:'Space Mono,monospace', fontSize:18, color:WC.red, fontWeight:700}}>28.4%</div>
+        <div style={{fontFamily:'Caveat,cursive', fontSize:11, color:'#b91c1c', marginTop:2}}>⚠ Aufträge mit nur 1 Angebot</div>
+      </WireCard>
+      <WireCard style={{flex:1, border:`1.5px solid ${WC.green}`, background:'#f0fdf4', justifyContent:'center'}}>
+        <div style={{fontFamily:'Space Mono,monospace', fontSize:18, color:WC.green, fontWeight:700}}>71.6%</div>
+        <div style={{fontFamily:'Caveat,cursive', fontSize:11, color:'#065f46', marginTop:2}}>Wettbewerb (2+ Angebote)</div>
+      </WireCard>
+    </div>
+
+    {/* Vergabeverfahren bar */}
+    <WireCard label="Vergabeverfahren — COUNT(*) + SUM(award_amount) per process_type" style={{height:120, flexShrink:0}}>
+      <WireBarChart h={85} bars={5} labels={['Offen','Selektiv','Einladung','Freihänd.','Direkt']}/>
+    </WireCard>
+
+    {/* Treemap + insights */}
+    <div style={{flex:1, display:'flex', gap:8, minHeight:0}}>
+      <WireCard label="CPV Branchen nach Volumen — cpv_code_main Treemap" style={{flex:'0 0 60%', alignItems:'center', justifyContent:'center'}}>
+        <WireTreemap w={580} h={200}/>
+      </WireCard>
+      <WireCard label="Markt-Insights" style={{flex:'0 0 40%', gap:6}}>
+        {[
+          [WC.red,    '⚠', 'Strassenbau: 41% Aufträge mit 1 Angebot'],
+          [WC.green,  '↑', 'IT-Dienste: +18% YoY Wachstum'],
+          [WC.accent, '●', 'Freihändige Vergaben: 15% des Volumens'],
+          [WC.cyan,   '○', 'TED-Publikationen: 12% (publication_ted)'],
+        ].map(([color,icon,text],i)=>(
+          <div key={i} style={{display:'flex', gap:7, alignItems:'flex-start', padding:'5px 8px', border:`1px solid ${color}33`, borderRadius:3, borderLeft:`3px solid ${color}`, background:`${color}08`}}>
+            <span style={{color, fontSize:11}}>{icon}</span>
+            <span style={{fontFamily:'Caveat,cursive', fontSize:11, color:WC.text}}>{text}</span>
+          </div>
+        ))}
+      </WireCard>
+    </div>
+  </WireFrame>
+);
+
+/* V2 – Four-Panel Grid: 2×2 equal quadrants */
+const MarktV2 = () => (
+  <WireFrame title="Markt" activePage={3}
+    filters={[{label:'2024',active:true},{label:'Baugewerbe',active:true},{label:'Alle Kantone'}]}>
+    <div style={{flex:1, display:'grid', gridTemplateColumns:'1fr 1fr', gridTemplateRows:'1fr 1fr', gap:8, minHeight:0}}>
+
+      {/* TL: Competition histogram */}
+      <WireCard label="Wettbewerbsintensität — number_of_submissions distribution">
+        <div style={{display:'flex', alignItems:'center', gap:14, flex:1}}>
+          <div style={{flexShrink:0}}>
+            <div style={{fontFamily:'Space Mono,monospace', fontSize:26, fontWeight:700, color:WC.accent}}>Ø 3.2</div>
+            <div style={{fontFamily:'Caveat,cursive', fontSize:10, color:WC.muted}}>Angebote</div>
+            <div style={{fontFamily:'Caveat,cursive', fontSize:10, color:WC.red, marginTop:4}}>⚠ 28% → 1 Angebot</div>
+          </div>
+          <div style={{flex:1, height:'100%'}}>
+            <WireBarChart h={110} bars={6} labels={['1','2','3','4','5','6+']}/>
+          </div>
+        </div>
+      </WireCard>
+
+      {/* TR: Vergabeverfahren donut */}
+      <WireCard label="Vergabeverfahren — process_type Verteilung" style={{alignItems:'center', justifyContent:'center'}} row>
+        <WireDonut size={130}/>
+        <DonutLegend items={['Offenes Verf. 45%','Selektives 22%','Einladung 18%','Freihändig 15%']}/>
+      </WireCard>
+
+      {/* BL: CPV Treemap */}
+      <WireCard label="CPV Branchen — SUM(award_amount) per cpv_code_main">
+        <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center'}}>
+          <WireTreemap w={520} h={180}/>
+        </div>
+      </WireCard>
+
+      {/* BR: Choropleth map placeholder */}
+      <WireCard label="Geografische Verteilung — Karte pro Kanton">
+        <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', border:`1.5px dashed ${WC.border}`, borderRadius:3, background:WC.fill, flexDirection:'column', gap:6}}>
+          <div style={{fontFamily:'Space Mono,monospace', fontSize:9, color:WC.muted}}>[ Choropleth Map ]</div>
+          <div style={{fontFamily:'Caveat,cursive', fontSize:12, color:WC.muted}}>Schweizer Kantone — Heatmap</div>
+          <div style={{fontFamily:'Caveat,cursive', fontSize:10, color:WC.muted}}>SUM(award_amount) per canton</div>
+          <Ann color='#9333ea'>map library TBD (e.g. MapLibre / D3-geo)</Ann>
+        </div>
+      </WireCard>
+
+    </div>
+  </WireFrame>
+);
+
+/* ══════════════════════════════════════════════════════════════════════
+   APP  ───────────────────────────────────────────────────────────────
+   ══════════════════════════════════════════════════════════════════════ */
+const App = () => (
+  <DesignCanvas title="SIMAP Explorer — Wireframes">
+    <DCSection id="overview" title="01 — Overview">
+      <DCArtboard id="ov1" label="V1: Hero-First" width={1280} height={800}><OverviewV1/></DCArtboard>
+      <DCArtboard id="ov2" label="V2: Data-First (expanded nav)" width={1280} height={800}><OverviewV2/></DCArtboard>
+    </DCSection>
+    <DCSection id="dashboard" title="02 — Dashboard">
+      <DCArtboard id="db1" label="V1: Classic Grid" width={1280} height={800}><DashboardV1/></DCArtboard>
+      <DCArtboard id="db2" label="V2: Left-Panel Filters" width={1280} height={800}><DashboardV2/></DCArtboard>
+    </DCSection>
+    <DCSection id="trends" title="03 — Trends">
+      <DCArtboard id="tr1" label="V1: Timeline Dominant" width={1280} height={800}><TrendsV1/></DCArtboard>
+      <DCArtboard id="tr2" label="V2: Multi-Kanton Compare" width={1280} height={800}><TrendsV2/></DCArtboard>
+    </DCSection>
+    <DCSection id="markt" title="04 — Markt">
+      <DCArtboard id="mk1" label="V1: Score-First" width={1280} height={800}><MarktV1/></DCArtboard>
+      <DCArtboard id="mk2" label="V2: Four-Panel Grid" width={1280} height={800}><MarktV2/></DCArtboard>
+    </DCSection>
+  </DesignCanvas>
+);
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

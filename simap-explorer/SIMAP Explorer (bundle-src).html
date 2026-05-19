@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SIMAP Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background: #0a0f1e;
+      color: #f9fafb;
+      font-family: 'Space Mono', monospace;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Subtle dot-grid background */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image: radial-gradient(rgba(59,130,246,0.08) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    #root { position: relative; z-index: 1; }
+
+    /* Page transition */
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(9px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .page-in { animation: pageIn 210ms ease forwards; }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #374151; }
+
+    /* Select arrow */
+    select { -webkit-appearance: none; appearance: none; }
+    button { cursor: pointer; font-family: inherit; }
+
+    /* Recharts responsive fix */
+    .recharts-wrapper, .recharts-surface { overflow: visible !important; }
+  </style>
+
+  <template id="__bundler_thumbnail" data-bg-color="#0a0f1e">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <!-- Background -->
+      <rect width="1200" height="800" fill="#0a0f1e"/>
+      <!-- Dot grid -->
+      <pattern id="dots" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
+        <circle cx="1" cy="1" r="1" fill="rgba(59,130,246,0.15)"/>
+      </pattern>
+      <rect width="1200" height="800" fill="url(#dots)"/>
+      <!-- Sidebar -->
+      <rect x="0" y="0" width="52" height="800" fill="#080d1a"/>
+      <rect x="52" y="0" width="1" height="800" fill="#1f2937"/>
+      <!-- Logo -->
+      <text x="26" y="28" textAnchor="middle" fill="#3b82f6" fontFamily="monospace" fontSize="11" fontWeight="700">SI</text>
+      <!-- Nav dots -->
+      <circle cx="26" cy="60" r="5" fill="#3b82f6" opacity="0.9"/>
+      <circle cx="26" cy="84" r="5" fill="#6b7280" opacity="0.5"/>
+      <circle cx="26" cy="108" r="5" fill="#6b7280" opacity="0.5"/>
+      <circle cx="26" cy="132" r="5" fill="#6b7280" opacity="0.5"/>
+      <!-- Top bar -->
+      <rect x="52" y="0" width="1148" height="54" fill="rgba(8,13,26,0.85)"/>
+      <rect x="52" y="54" width="1148" height="1" fill="#1f2937"/>
+      <text x="80" y="32" fill="#f9fafb" fontFamily="monospace" fontSize="13" fontWeight="700">Overview</text>
+      <!-- Accent top line on KPIs -->
+      <rect x="72" y="70" width="254" height="80" fill="rgba(255,255,255,0.03)" rx="8"/>
+      <rect x="72" y="70" width="254" height="1" fill="rgba(59,130,246,0.4)"/>
+      <rect x="338" y="70" width="254" height="80" fill="rgba(255,255,255,0.03)" rx="8"/>
+      <rect x="338" y="70" width="254" height="1" fill="rgba(59,130,246,0.4)"/>
+      <rect x="604" y="70" width="254" height="80" fill="rgba(255,255,255,0.03)" rx="8"/>
+      <rect x="604" y="70" width="254" height="1" fill="rgba(59,130,246,0.4)"/>
+      <rect x="870" y="70" width="254" height="80" fill="rgba(255,255,255,0.03)" rx="8"/>
+      <rect x="870" y="70" width="254" height="1" fill="rgba(59,130,246,0.4)"/>
+      <!-- KPI text placeholders -->
+      <text x="92" y="102" fill="#f9fafb" fontFamily="monospace" fontSize="22" fontWeight="700">187k</text>
+      <text x="358" y="102" fill="#f9fafb" fontFamily="monospace" fontSize="22" fontWeight="700">4.8 Mrd.</text>
+      <text x="624" y="102" fill="#f9fafb" fontFamily="monospace" fontSize="22" fontWeight="700">Ø 3.2</text>
+      <text x="890" y="102" fill="#f9fafb" fontFamily="monospace" fontSize="22" fontWeight="700">12.4k</text>
+      <!-- 3 chart cards -->
+      <rect x="72" y="166" width="362" height="360" fill="rgba(255,255,255,0.03)" rx="8"/>
+      <rect x="446" y="166" width="362" height="360" fill="rgba(255,255,255,0.03)" rx="8"/>
+      <rect x="820" y="166" width="304" height="360" fill="rgba(255,255,255,0.03)" rx="8"/>
+      <!-- Bar chart silhouette -->
+      <rect x="92" y="480" width="28" height="30" fill="rgba(59,130,246,0.5)" rx="2"/>
+      <rect x="128" y="460" width="28" height="50" fill="rgba(59,130,246,0.6)" rx="2"/>
+      <rect x="164" y="440" width="28" height="70" fill="rgba(59,130,246,0.7)" rx="2"/>
+      <rect x="200" y="450" width="28" height="60" fill="rgba(6,182,212,0.6)" rx="2"/>
+      <rect x="236" y="430" width="28" height="80" fill="rgba(6,182,212,0.7)" rx="2"/>
+      <rect x="272" y="420" width="28" height="90" fill="rgba(59,130,246,0.8)" rx="2"/>
+      <!-- Area chart silhouette -->
+      <path d="M466,480 L506,460 L546,470 L586,440 L626,448 L666,420 L706,430 L746,400 L786,406 L786,510 L466,510 Z" fill="rgba(59,130,246,0.12)"/>
+      <path d="M466,480 L506,460 L546,470 L586,440 L626,448 L666,420 L706,430 L746,400 L786,406" fill="none" stroke="#3b82f6" strokeWidth="2"/>
+      <!-- Horizontal bars -->
+      <rect x="848" y="196" width="180" height="10" fill="rgba(59,130,246,0.7)" rx="2"/>
+      <rect x="848" y="216" width="145" height="10" fill="rgba(6,182,212,0.65)" rx="2"/>
+      <rect x="848" y="236" width="120" height="10" fill="rgba(59,130,246,0.6)" rx="2"/>
+      <rect x="848" y="256" width="95" height="10" fill="rgba(6,182,212,0.55)" rx="2"/>
+      <rect x="848" y="276" width="78" height="10" fill="rgba(59,130,246,0.5)" rx="2"/>
+      <!-- Table card -->
+      <rect x="72" y="540" width="1052" height="200" fill="rgba(255,255,255,0.03)" rx="8"/>
+      <rect x="72" y="560" width="1052" height="1" fill="#1f2937"/>
+      <rect x="92" y="575" width="300" height="6" fill="rgba(255,255,255,0.08)" rx="2"/>
+      <rect x="92" y="595" width="260" height="6" fill="rgba(255,255,255,0.06)" rx="2"/>
+      <rect x="92" y="615" width="280" height="6" fill="rgba(255,255,255,0.08)" rx="2"/>
+      <rect x="92" y="635" width="240" height="6" fill="rgba(255,255,255,0.06)" rx="2"/>
+    </svg>
+  </template>
+</head>
+<body>
+<div id="root"></div>
+<script src="simap-data.js"></script>
+<script type="text/babel" src="simap-components.jsx"></script>
+<script type="text/babel" src="simap-charts.jsx"></script>
+<script type="text/babel" src="simap-pages.jsx"></script>
+<script type="text/babel">
+
+const PAGE_META = {
+  overview:  {title:'Overview',   sub:'Alle SIMAP Ausschreibungen — Überblick',   Component: OverviewPage},
+  dashboard: {title:'Dashboard',  sub:'Gefilterte Analyse — Kantone / CPV / Jahr', Component: DashboardPage},
+  trends:    {title:'Trends',     sub:'Zeitreihen & Kantonvergleich',              Component: TrendsPage},
+  markt:     {title:'Markt',      sub:'Marktanalyse — Wettbewerb & Branchen',      Component: MarktPage},
+};
+
+const App = () => {
+  const [page, setPage]         = React.useState('overview');
+  const [animKey, setAnimKey]   = React.useState(0);
+  const [pillYear, setPillYear] = React.useState('2024');
+
+  const navigate = (next) => {
+    if (next === page) return;
+    setPage(next);
+    setAnimKey(k => k + 1);
+  };
+
+  const { title, sub, Component } = PAGE_META[page];
+
+  return (
+    <div style={{display:'flex', height:'100vh', width:'100vw', overflow:'hidden', background:'#0a0f1e'}}>
+      <Sidebar currentPage={page} onNavigate={navigate}/>
+
+      <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0}}>
+        {/* Top bar — shared across all pages */}
+        <TopBar title={title} subtitle={sub}>
+          {page !== 'dashboard' ? (
+            <div style={{display:'flex', gap:6, alignItems:'center'}}>
+              {['2024','2023','2022'].map(y => (
+                <FilterPill key={y} label={y} active={pillYear===y} onToggle={() => setPillYear(y)}/>
+              ))}
+              <div style={{width:1, height:16, background:SC.border, margin:'0 4px'}}/>
+              <FilterPill label="Alle Kantone"/>
+              <FilterPill label="Alle CPV"/>
+            </div>
+          ) : (
+            <div style={{fontFamily:'Space Mono,monospace',fontSize:8,color:SC.muted,letterSpacing:'0.06em'}}>
+              ← Filter im linken Panel
+            </div>
+          )}
+        </TopBar>
+
+        {/* Page content — re-keyed to animate on navigation */}
+        <div key={animKey} className="page-in"
+          style={{flex:1, display:'flex', overflow:'hidden', minHeight:0}}>
+          <Component/>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

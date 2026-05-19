@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SIMAP Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background: #0a0f1e;
+      color: #f9fafb;
+      font-family: 'Space Mono', monospace;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Subtle dot-grid background */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image: radial-gradient(rgba(59,130,246,0.08) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    #root { position: relative; z-index: 1; }
+
+    /* Page transition */
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(9px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .page-in { animation: pageIn 210ms ease forwards; }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #374151; }
+
+    /* Select arrow */
+    select { -webkit-appearance: none; appearance: none; }
+    button { cursor: pointer; font-family: inherit; }
+
+    /* Recharts responsive fix */
+    .recharts-wrapper, .recharts-surface { overflow: visible !important; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script src="simap-data.js"></script>
+<script type="text/babel" src="simap-components.jsx"></script>
+<script type="text/babel" src="simap-charts.jsx"></script>
+<script type="text/babel" src="simap-pages.jsx"></script>
+<script type="text/babel">
+
+const PAGE_META = {
+  overview:  {title:'Overview',   sub:'Alle SIMAP Ausschreibungen — Überblick',   Component: OverviewPage},
+  dashboard: {title:'Dashboard',  sub:'Gefilterte Analyse — Kantone / CPV / Jahr', Component: DashboardPage},
+  trends:    {title:'Trends',     sub:'Zeitreihen & Kantonvergleich',              Component: TrendsPage},
+  markt:     {title:'Markt',      sub:'Marktanalyse — Wettbewerb & Branchen',      Component: MarktPage},
+};
+
+const App = () => {
+  const [page, setPage]         = React.useState('overview');
+  const [animKey, setAnimKey]   = React.useState(0);
+  const [pillYear, setPillYear] = React.useState('2024');
+
+  const navigate = (next) => {
+    if (next === page) return;
+    setPage(next);
+    setAnimKey(k => k + 1);
+  };
+
+  const { title, sub, Component } = PAGE_META[page];
+
+  return (
+    <div style={{display:'flex', height:'100vh', width:'100vw', overflow:'hidden', background:'#0a0f1e'}}>
+      <Sidebar currentPage={page} onNavigate={navigate}/>
+
+      <div style={{flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0}}>
+        {/* Top bar — shared across all pages */}
+        <TopBar title={title} subtitle={sub}>
+          {page !== 'dashboard' ? (
+            <div style={{display:'flex', gap:6, alignItems:'center'}}>
+              {['2024','2023','2022'].map(y => (
+                <FilterPill key={y} label={y} active={pillYear===y} onToggle={() => setPillYear(y)}/>
+              ))}
+              <div style={{width:1, height:16, background:SC.border, margin:'0 4px'}}/>
+              <FilterPill label="Alle Kantone"/>
+              <FilterPill label="Alle CPV"/>
+            </div>
+          ) : (
+            <div style={{fontFamily:'Space Mono,monospace',fontSize:8,color:SC.muted,letterSpacing:'0.06em'}}>
+              ← Filter im linken Panel
+            </div>
+          )}
+        </TopBar>
+
+        {/* Page content — re-keyed to animate on navigation */}
+        <div key={animKey} className="page-in"
+          style={{flex:1, display:'flex', overflow:'hidden', minHeight:0}}>
+          <Component/>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
