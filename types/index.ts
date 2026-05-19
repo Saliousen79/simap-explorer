@@ -1,3 +1,5 @@
+import { AgentChatResponse } from "@/lib/agents/types";
+
 export type ChatRole = "user" | "assistant";
 
 export interface ChatMessage {
@@ -6,6 +8,7 @@ export interface ChatMessage {
   content: string;
   createdAt: string;
   pinned?: boolean;
+  agentResult?: AgentChatResponse;
 }
 
 export interface Kpi {

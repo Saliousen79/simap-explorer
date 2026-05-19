@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import GridLayout, { Layout } from "react-grid-layout";
 import {
   ResponsiveContainer,
@@ -14,9 +15,12 @@ import {
   Pie,
   Cell
 } from "recharts";
+import { ChartRenderer } from "@/components/charts/ChartRenderer";
 import { ChartCard } from "@/components/dashboard/chart-card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
+import { getPinnedCharts } from "@/components/dashboard/PinChartButton";
 import { kpis, timeSeriesData, topCategories } from "@/lib/mock-data";
+import { PinnedChart } from "@/lib/agents/types";
 
 const COLORS = ["#38bdf8", "#60a5fa", "#818cf8", "#34d399", "#f59e0b"];
 
@@ -28,6 +32,21 @@ const defaultLayout: Layout[] = [
 ];
 
 export default function DashboardPage() {
+  const [pinnedCharts, setPinnedCharts] = useState<PinnedChart[]>([]);
+
+  useEffect(() => {
+    const syncPinnedCharts = () => setPinnedCharts(getPinnedCharts());
+
+    syncPinnedCharts();
+    window.addEventListener("simap-pinned-charts-updated", syncPinnedCharts);
+    window.addEventListener("storage", syncPinnedCharts);
+
+    return () => {
+      window.removeEventListener("simap-pinned-charts-updated", syncPinnedCharts);
+      window.removeEventListener("storage", syncPinnedCharts);
+    };
+  }, []);
+
   return (
     <section className="space-y-4">
       <h1 className="text-2xl font-semibold tracking-tight">Customizable Dashboard</h1>
@@ -39,6 +58,21 @@ export default function DashboardPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">Drag and resize widgets to pin your preferred BI layout.</p>
+
+      {pinnedCharts.length ? (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {pinnedCharts.map((chart) => (
+            <ChartCard key={chart.id} title={chart.title}>
+              <div className="space-y-3">
+                <div className="h-[190px]">
+                  <ChartRenderer chart={chart} />
+                </div>
+                <p className="text-xs text-muted-foreground">{chart.whyInteresting}</p>
+              </div>
+            </ChartCard>
+          ))}
+        </div>
+      ) : null}
 
       <GridLayout className="layout" cols={12} width={1200} rowHeight={32} layout={defaultLayout} draggableHandle=".drag-handle">
         <div key="contracts">

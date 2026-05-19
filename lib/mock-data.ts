@@ -1,33 +1,9 @@
-import { ChatMessage, Kpi } from "@/types";
+import { Kpi } from "@/types";
 
 export const suggestedPrompts = [
-  "Show interesting procurement trends from 2023",
-  "Analyze IT contracts by canton",
-  "Compare construction tenders between 2022 and 2025"
-];
-
-export const mockMessages: ChatMessage[] = [
-  {
-    id: "1",
-    role: "assistant",
-    createdAt: "09:15",
-    content:
-      "### Snapshot\nSwiss procurement volume accelerated in Q4 2023, led by IT and transport contracts in Zurich and Vaud."
-  },
-  {
-    id: "2",
-    role: "user",
-    createdAt: "09:16",
-    content: "Analyze IT contracts by canton"
-  },
-  {
-    id: "3",
-    role: "assistant",
-    createdAt: "09:16",
-    pinned: true,
-    content:
-      "### Top Findings\n- Zurich and Bern dominate total IT award volume.\n- Geneva has fewer contracts but higher median award size.\n- Single-bid awards are elevated in smaller cantons."
-  }
+  "Trends 2023",
+  "IT nach Kanton",
+  "Bauvergaben vergleichen"
 ];
 
 export const kpis: Kpi[] = [

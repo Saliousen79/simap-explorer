@@ -1,18 +1,24 @@
-import { Button } from "@/components/ui/button";
-
 export function SuggestedPrompts({
   prompts,
-  onPick
+  onPick,
+  disabled = false
 }: {
   prompts: string[];
   onPick: (prompt: string) => void;
+  disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-wrap justify-center gap-2">
+    <div className="liquid-glass-suggestions">
       {prompts.map((prompt) => (
-        <Button key={prompt} variant="outline" size="sm" onClick={() => onPick(prompt)}>
+        <button
+          key={prompt}
+          type="button"
+          disabled={disabled}
+          onClick={() => onPick(prompt)}
+          className="liquid-glass-chip"
+        >
           {prompt}
-        </Button>
+        </button>
       ))}
     </div>
   );

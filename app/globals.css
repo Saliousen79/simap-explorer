@@ -29,3 +29,157 @@ body {
     radial-gradient(circle at 10% 0%, rgba(59, 130, 246, 0.15), transparent 35%),
     radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.1), transparent 28%);
 }
+
+/* Liquid glass chat */
+.liquid-chat-shell {
+  @apply relative flex min-h-[calc(100vh-4rem)] flex-1 items-center justify-center px-4 py-8 md:min-h-[calc(100vh-5rem)];
+}
+
+.liquid-chat-ambient {
+  @apply pointer-events-none absolute inset-0 overflow-hidden;
+}
+
+.liquid-chat-ambient::before,
+.liquid-chat-ambient::after {
+  content: "";
+  @apply absolute rounded-full blur-3xl;
+  animation: liquid-drift 18s ease-in-out infinite alternate;
+}
+
+.liquid-chat-ambient::before {
+  @apply -left-24 top-1/4 h-72 w-72;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.22), transparent 70%);
+}
+
+.liquid-chat-ambient::after {
+  @apply -right-16 bottom-1/4 h-80 w-80;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.18), transparent 70%);
+  animation-delay: -6s;
+}
+
+@keyframes liquid-drift {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(24px, -16px) scale(1.08);
+  }
+}
+
+.liquid-glass-panel {
+  @apply relative z-10 flex w-full max-w-5xl flex-col overflow-hidden rounded-3xl;
+  min-height: min(520px, calc(100vh - 8rem));
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.07) 0%,
+    rgba(255, 255, 255, 0.02) 45%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 24px 48px -12px rgba(0, 0, 0, 0.45),
+    0 8px 24px -8px rgba(56, 189, 248, 0.08);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+}
+
+.liquid-glass-header {
+  @apply shrink-0 border-b border-white/5 px-5 py-4 text-center;
+}
+
+.liquid-glass-messages {
+  @apply flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.liquid-glass-bubble {
+  @apply max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed;
+}
+
+.liquid-glass-bubble.assistant {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: hsl(var(--foreground) / 0.92);
+}
+
+.liquid-glass-bubble.user {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: hsl(var(--foreground));
+}
+
+.liquid-glass-suggestions {
+  @apply flex flex-wrap justify-center gap-2 px-4 pb-2;
+}
+
+.liquid-glass-chip {
+  @apply rounded-full px-3 py-1.5 text-xs text-muted-foreground transition;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.liquid-glass-chip:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: hsl(var(--foreground));
+}
+
+.liquid-glass-chip:disabled {
+  @apply cursor-not-allowed opacity-50;
+}
+
+.liquid-glass-input-row {
+  @apply flex shrink-0 items-center gap-2 border-t border-white/5 p-3;
+}
+
+.liquid-glass-input {
+  @apply min-w-0 flex-1 rounded-xl bg-transparent px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground/60;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.liquid-glass-input:focus {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+}
+
+.liquid-glass-send {
+  @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-primary-foreground transition disabled:opacity-40;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(203 89% 48%));
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.liquid-glass-send:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.liquid-typing {
+  @apply flex items-center gap-1 px-1 py-0.5;
+}
+
+.liquid-typing span {
+  @apply h-1.5 w-1.5 rounded-full bg-muted-foreground/60;
+  animation: liquid-pulse 1.2s ease-in-out infinite;
+}
+
+.liquid-typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.liquid-typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes liquid-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
