@@ -1,43 +1,14 @@
-import { ALLOWED_COLUMNS, SIMAP_TABLE } from "@/lib/config/simap-schema";
+import { ALLOWED_COLUMNS, SIMAP_TABLES } from "@/lib/config/simap-schema";
 
 const FORBIDDEN_KEYWORDS = [
-  "INSERT",
-  "UPDATE",
-  "DELETE",
-  "DROP",
-  "ALTER",
-  "CREATE",
-  "TRUNCATE",
-  "GRANT",
-  "REVOKE",
-  "CALL",
-  "DO",
-  "COPY",
-  "EXECUTE"
+  "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "TRUNCATE",
+  "GRANT", "REVOKE", "CALL", "DO", "COPY", "EXECUTE", "MERGE"
 ];
 
 const SQL_WORDS = new Set([
-  "as",
-  "select",
-  "with",
-  "from",
-  "where",
-  "group",
-  "by",
-  "order",
-  "limit",
-  "and",
-  "or",
-  "not",
-  "is",
-  "null",
-  "desc",
-  "asc",
-  "count",
-  "sum",
-  "coalesce",
-  "numeric",
-  "int"
+  "as", "select", "from", "where", "group", "by", "order", "limit", "and",
+  "or", "not", "is", "null", "desc", "asc", "distinct", "count", "sum", "avg", "min", "max", "round",
+  "coalesce", "date_trunc", "to_char", "date", "text", "numeric", "int"
 ]);
 
 function stripCommentsAndStrings(sql: string) {
@@ -47,23 +18,15 @@ function stripCommentsAndStrings(sql: string) {
     .replace(/'([^']|'')*'/g, "''");
 }
 
-function unquoteIdentifier(identifier: string) {
-  return identifier.replace(/^"|"$/g, "").toLowerCase();
+function normalizeTableName(identifier: string) {
+  return identifier.replaceAll('"', "").toLowerCase();
 }
 
-/**
- * SQL guard = basic tool safety.
- *
- * The real security layer is still the database read-only role
- * behind DATABASE_READONLY_URL. This guard keeps generated SQL simple
- * and blocks obvious unsafe statements before the query tool is used.
- */
 export function assertSafeSelectQuery(sql: string) {
   const cleaned = stripCommentsAndStrings(sql).trim();
-  const normalized = cleaned.toUpperCase();
 
-  if (!/^(SELECT|WITH)\b/.test(normalized)) {
-    throw new Error("Only SELECT or WITH queries are allowed.");
+  if (!/^SELECT\b/i.test(cleaned)) {
+    throw new Error("Only SELECT queries are allowed.");
   }
 
   if (cleaned.includes(";")) {
@@ -80,25 +43,31 @@ export function assertSafeSelectQuery(sql: string) {
     throw new Error("SELECT * is not allowed.");
   }
 
-  const tableMatches = Array.from(cleaned.matchAll(/\b(?:FROM|JOIN)\s+("[^"]+"|[a-zA-Z_][\w.]*)/gi));
-  if (tableMatches.length === 0) {
-    throw new Error("A query must read from the configured SIMAP table.");
+  const tablePattern = /\b(?:FROM|JOIN)\s+((?:"[^"]+"|[a-zA-Z_]\w*)(?:\.(?:"[^"]+"|[a-zA-Z_]\w*))?)/gi;
+  const usedTables = Array.from(cleaned.matchAll(tablePattern), (match) => normalizeTableName(match[1]));
+  const allowedTables = new Set<string>(SIMAP_TABLES);
+
+  if (!usedTables.length) {
+    throw new Error("A query must read from a configured SIMAP table.");
   }
 
-  const allowedTable = SIMAP_TABLE.toLowerCase();
-  for (const match of tableMatches) {
-    const usedTable = unquoteIdentifier(match[1]);
-    if (usedTable !== allowedTable) {
-      throw new Error(`Only the configured SIMAP table is allowed: ${SIMAP_TABLE}`);
+  for (const table of usedTables) {
+    if (!allowedTables.has(table)) {
+      throw new Error(`Table is not allowed: ${table}`);
     }
   }
 
-  const allowedColumns = new Set(ALLOWED_COLUMNS.map((column) => column.toLowerCase()));
+  const limitMatch = cleaned.match(/\bLIMIT\s+(\d+)\b/i);
+  if (!limitMatch || Number(limitMatch[1]) > 1000) {
+    throw new Error("Queries must use LIMIT 1000 or less.");
+  }
+
+  const allowedColumns = new Set<string>(ALLOWED_COLUMNS);
   const aliases = new Set(
-    Array.from(cleaned.matchAll(/\bAS\s+([a-zA-Z_][\w]*)/gi)).map((match) => match[1].toLowerCase())
+    Array.from(cleaned.matchAll(/\bAS\s+([a-zA-Z_]\w*)/gi), (match) => match[1].toLowerCase())
   );
-  const tableParts = new Set(SIMAP_TABLE.toLowerCase().split("."));
-  const identifiers = cleaned.match(/[a-zA-Z_][\w]*/g) ?? [];
+  const tableParts = new Set(SIMAP_TABLES.flatMap((table) => table.split(".")));
+  const identifiers = cleaned.match(/[a-zA-Z_]\w*/g) ?? [];
 
   for (const identifier of identifiers) {
     const token = identifier.toLowerCase();
@@ -111,4 +80,3 @@ export function assertSafeSelectQuery(sql: string) {
 
   return sql;
 }
-

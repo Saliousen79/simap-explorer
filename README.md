@@ -20,4 +20,19 @@ flowchart LR
   F --> G[Dashboard]
 ```
 
-Edit `lib/config/simap-schema.ts` to set the real SIMAP table name and allowed columns.
+The workflow reads only from `public.archive` and `public.projects`. Configure the
+dedicated read-only PostgreSQL role in `.env.local`:
+
+```env
+DATABASE_READONLY_URL=postgresql://simap_app_reader.PROJECT_REF:PASSWORD@POOLER_HOST:5432/postgres
+```
+
+Never expose this value through a `NEXT_PUBLIC_` environment variable.
+
+## OpenRouter agents
+
+Copy the OpenRouter variables from `.env.example` to `.env.local`. The API key
+must remain server-side. DeepSeek generates the SQL plan and competes with
+Gemini on the same aggregated query result. Both chart agents return validated
+JSON configurations and short data insights; they never return executable UI
+code.

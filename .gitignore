@@ -1,7 +1,11 @@
 .DS_Store
 node_modules
+.pnpm-store
 .next
 out
+*.tsbuildinfo
+pnpm-lock.yaml
+pnpm-workspace.yaml
 
 .env
 .env*.local

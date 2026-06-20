@@ -1,5 +1,8 @@
-import { Pool } from "pg";
+import { Pool, types } from "pg";
 import { SqlRow } from "@/lib/agents/types";
+
+types.setTypeParser(20, Number);
+types.setTypeParser(1700, Number);
 
 let pool: Pool | null = null;
 
@@ -33,4 +36,3 @@ export async function runReadonlyQuery(sql: string): Promise<SqlRow[]> {
   const result = await getPool().query(sql);
   return result.rows as SqlRow[];
 }
-
