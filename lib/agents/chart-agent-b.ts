@@ -5,12 +5,12 @@ function dimensionKey(row: SqlRow | undefined, fallback: string) {
   return Object.keys(row).find((key) => typeof row[key] !== "number") ?? fallback;
 }
 
-function valueKey(row: SqlRow | undefined, fallback: string) {
-  if (!row) return fallback;
+function valueKey(row: SqlRow | undefined) {
+  if (!row) return null;
   return (
-    Object.keys(row).find((key) => key.includes("value") && typeof row[key] === "number") ??
+    Object.keys(row).find((key) => (key.includes("amount") || key.includes("value")) && typeof row[key] === "number") ??
     Object.keys(row).find((key) => typeof row[key] === "number") ??
-    fallback
+    null
   );
 }
 
@@ -24,22 +24,24 @@ function valueKey(row: SqlRow | undefined, fallback: string) {
 export function ChartAgentB(rows: SqlRow[]): ChartAgentResult {
   const firstRow = rows[0];
   const xKey = dimensionKey(firstRow, "label");
-  const yKey = valueKey(firstRow, "total_estimated_value");
-  const hasTimeFields = Boolean(firstRow && "year" in firstRow && "month" in firstRow);
+  const yKey = valueKey(firstRow);
+  const hasTimeFields = Boolean(firstRow && "period" in firstRow);
 
   return {
     title: hasTimeFields ? "Estimated Value Trend" : "Value Perspective",
-    chartType: hasTimeFields ? "area" : "table",
+    chartType: hasTimeFields && yKey ? "area" : "table",
     xKey: hasTimeFields ? "period" : xKey,
-    yKey,
+    yKey: yKey ?? "",
+    series: yKey ? [{ key: yKey, label: yKey, type: hasTimeFields ? "area" : "bar", color: "#818cf8" }] : [],
+    stacked: false,
+    showLegend: false,
     description: "An alternative view that focuses on estimated value instead of only counting records.",
     whyInteresting: "This helps compare activity volume with financial importance, which can lead to a different BI conclusion.",
-    data: hasTimeFields
-      ? rows.map((row) => ({
-          ...row,
-          period: `${row.year}-${String(row.month).padStart(2, "0")}`
-        }))
-      : rows
+    insights: ["Lokale Ersatzdarstellung mit Fokus auf finanzielle Kennzahlen.", "Für eine KI-Interpretation ist OpenRouter erforderlich."],
+    caveat: "Diese lokale Darstellung enthält keine LLM-Interpretation.",
+    model: "local",
+    modelLabel: "Lokaler Fallback",
+    latencyMs: 0,
+    data: rows
   };
 }
-

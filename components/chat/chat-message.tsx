@@ -14,9 +14,9 @@ export function ChatMessageCard({ message }: { message: ChatMessage }) {
       transition={{ duration: 0.25 }}
       className={`flex ${isAssistant ? "justify-start" : "justify-end"}`}
     >
-      {message.agentResult ? (
+      {message.agentWorkflow ? (
         <div className="w-full">
-          <AgentResult result={message.agentResult} />
+          <AgentResult workflow={message.agentWorkflow} />
         </div>
       ) : (
         <p className={`liquid-glass-bubble ${isAssistant ? "assistant" : "user"}`}>{message.content}</p>

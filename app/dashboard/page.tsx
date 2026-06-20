@@ -1,131 +1,117 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import GridLayout, { Layout } from "react-grid-layout";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell
-} from "recharts";
+import { LayoutDashboard, Trash2, X } from "lucide-react";
 import { ChartRenderer } from "@/components/charts/ChartRenderer";
-import { ChartCard } from "@/components/dashboard/chart-card";
-import { KpiCard } from "@/components/dashboard/kpi-card";
-import { getPinnedCharts } from "@/components/dashboard/PinChartButton";
-import { kpis, timeSeriesData, topCategories } from "@/lib/mock-data";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { clearPinnedCharts, getPinnedCharts, removePinnedChart } from "@/components/dashboard/PinChartButton";
 import { PinnedChart } from "@/lib/agents/types";
+import "react-grid-layout/css/styles.css";
 
-const COLORS = ["#38bdf8", "#60a5fa", "#818cf8", "#34d399", "#f59e0b"];
-
-const defaultLayout: Layout[] = [
-  { i: "contracts", x: 0, y: 0, w: 6, h: 8 },
-  { i: "volume", x: 6, y: 0, w: 6, h: 8 },
-  { i: "categories", x: 0, y: 8, w: 6, h: 8 },
-  { i: "insights", x: 6, y: 8, w: 6, h: 8 }
-];
+function defaultLayout(charts: PinnedChart[]): Layout[] {
+  return charts.map((chart, index) => ({
+    i: chart.id,
+    x: (index % 2) * 6,
+    y: Math.floor(index / 2) * 10,
+    w: 6,
+    h: 10,
+    minW: 4,
+    minH: 8
+  }));
+}
 
 export default function DashboardPage() {
   const [pinnedCharts, setPinnedCharts] = useState<PinnedChart[]>([]);
+  const [layout, setLayout] = useState<Layout[]>([]);
+  const [width, setWidth] = useState(1000);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const syncPinnedCharts = () => setPinnedCharts(getPinnedCharts());
-
-    syncPinnedCharts();
-    window.addEventListener("simap-pinned-charts-updated", syncPinnedCharts);
-    window.addEventListener("storage", syncPinnedCharts);
-
+    const sync = () => {
+      const charts = getPinnedCharts();
+      const defaults = defaultLayout(charts);
+      setPinnedCharts(charts);
+      setLayout((previous) => charts.map((chart, index) =>
+        previous.find((item) => item.i === chart.id) ?? defaults[index]
+      ));
+    };
+    sync();
+    window.addEventListener("simap-pinned-charts-updated", sync);
+    window.addEventListener("storage", sync);
     return () => {
-      window.removeEventListener("simap-pinned-charts-updated", syncPinnedCharts);
-      window.removeEventListener("storage", syncPinnedCharts);
+      window.removeEventListener("simap-pinned-charts-updated", sync);
+      window.removeEventListener("storage", sync);
     };
   }, []);
 
-  return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">Customizable Dashboard</h1>
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(([entry]) => setWidth(Math.max(320, entry.contentRect.width)));
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map((kpi) => (
-          <KpiCard key={kpi.id} kpi={kpi} />
-        ))}
+  return (
+    <section className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Mein Analyse-Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Ausgewählte Agentenanalysen lassen sich verschieben und skalieren.</p>
+        </div>
+        {pinnedCharts.length ? (
+          <Button variant="outline" size="sm" onClick={clearPinnedCharts}>
+            <Trash2 className="mr-2 h-4 w-4" /> Alle entfernen
+          </Button>
+        ) : null}
       </div>
 
-      <p className="text-xs text-muted-foreground">Drag and resize widgets to pin your preferred BI layout.</p>
-
-      {pinnedCharts.length ? (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {pinnedCharts.map((chart) => (
-            <ChartCard key={chart.id} title={chart.title}>
-              <div className="space-y-3">
-                <div className="h-[190px]">
-                  <ChartRenderer chart={chart} />
-                </div>
-                <p className="text-xs text-muted-foreground">{chart.whyInteresting}</p>
-              </div>
-            </ChartCard>
-          ))}
-        </div>
-      ) : null}
-
-      <GridLayout className="layout" cols={12} width={1200} rowHeight={32} layout={defaultLayout} draggableHandle=".drag-handle">
-        <div key="contracts">
-          <ChartCard title="Contracts Over Time">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={timeSeriesData}>
-                <XAxis dataKey="month" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip />
-                <Line type="monotone" dataKey="contracts" stroke="#38bdf8" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
-
-        <div key="volume">
-          <ChartCard title="Award Volume by Month (CHF M)">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={timeSeriesData}>
-                <XAxis dataKey="month" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip />
-                <Bar dataKey="volume" fill="#60a5fa" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
-
-        <div key="categories">
-          <ChartCard title="Top Categories">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={topCategories} dataKey="value" nameKey="name" outerRadius={80}>
-                  {topCategories.map((entry, index) => (
-                    <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
-
-        <div key="insights">
-          <ChartCard title="AI Insights">
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>1) IT and infrastructure dominate 62% of high-value awards.</p>
-              <p>2) Single-submission ratio remains elevated in smaller cantons.</p>
-              <p>3) Framework agreements increased procurement velocity in 2024.</p>
+      <div ref={containerRef}>
+        {!pinnedCharts.length ? (
+          <Card className="flex min-h-[360px] flex-col items-center justify-center gap-4 p-8 text-center">
+            <span className="rounded-2xl bg-primary/10 p-4 text-primary"><LayoutDashboard className="h-7 w-7" /></span>
+            <div>
+              <h2 className="font-semibold">Noch keine Analysen angeheftet</h2>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">Stelle im Chat eine Frage, vergleiche DeepSeek und Gemini und hefte die bessere Visualisierung hier an.</p>
             </div>
-          </ChartCard>
-        </div>
-      </GridLayout>
+            <Link href="/" className={buttonVariants()}>Analyse starten</Link>
+          </Card>
+        ) : (
+          <GridLayout
+            className="layout"
+            cols={12}
+            width={width}
+            rowHeight={32}
+            layout={layout}
+            onLayoutChange={setLayout}
+            draggableHandle=".drag-handle"
+          >
+            {pinnedCharts.map((chart) => (
+              <div key={chart.id}>
+                <Card className="flex h-full min-w-0 flex-col overflow-hidden p-4">
+                  <div className="drag-handle mb-3 flex cursor-move items-start justify-between gap-3">
+                    <div>
+                      <h2 className="font-semibold">{chart.title}</h2>
+                      <p className="text-xs text-muted-foreground">{chart.modelLabel} · {new Date(chart.createdAt).toLocaleDateString("de-CH")}</p>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => removePinnedChart(chart.id)} aria-label="Analyse entfernen">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="min-h-0 min-w-0 flex-1"><ChartRenderer chart={chart} /></div>
+                  <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                    <p className="font-medium text-foreground/80">{chart.question}</p>
+                    {chart.insights.slice(0, 2).map((insight) => <p key={insight}>• {insight}</p>)}
+                  </div>
+                </Card>
+              </div>
+            ))}
+          </GridLayout>
+        )}
+      </div>
     </section>
   );
 }

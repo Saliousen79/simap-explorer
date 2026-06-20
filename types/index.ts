@@ -1,4 +1,4 @@
-import { AgentChatResponse } from "@/lib/agents/types";
+import { AgentWorkflowState } from "@/lib/agents/types";
 
 export type ChatRole = "user" | "assistant";
 
@@ -8,7 +8,7 @@ export interface ChatMessage {
   content: string;
   createdAt: string;
   pinned?: boolean;
-  agentResult?: AgentChatResponse;
+  agentWorkflow?: AgentWorkflowState;
 }
 
 export interface Kpi {

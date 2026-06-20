@@ -5,12 +5,12 @@ import { motion } from "framer-motion";
 import { ArrowUp } from "lucide-react";
 import { ChatMessageCard } from "@/components/chat/chat-message";
 import { SuggestedPrompts } from "@/components/chat/suggested-prompts";
-import { useChatMock } from "@/hooks/use-chat-mock";
-import { suggestedPrompts } from "@/lib/mock-data";
+import { useAgentChat } from "@/hooks/use-agent-chat";
+import { suggestedPrompts } from "@/lib/suggested-prompts";
 
 export function LiquidChatPanel() {
   const [prompt, setPrompt] = useState("");
-  const { messages, isLoading, simulateReply } = useChatMock();
+  const { messages, isLoading, ask } = useAgentChat();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,13 +21,13 @@ export function LiquidChatPanel() {
     event.preventDefault();
     const text = prompt.trim();
     if (!text || isLoading) return;
-    await simulateReply(text);
+    await ask(text);
     setPrompt("");
   };
 
   const onPick = async (value: string) => {
     if (isLoading) return;
-    await simulateReply(value);
+    await ask(value);
     setPrompt("");
   };
 
