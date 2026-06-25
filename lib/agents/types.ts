@@ -1,14 +1,96 @@
-export type ChartType = "bar" | "line" | "area" | "pie" | "scatter" | "composed" | "table";
+import { z } from "zod";
+
+export const CANTON_CODES = [
+  "AG", "AI", "AR", "BE", "BL", "BS", "FR", "GE", "GL", "GR", "JU", "LU", "NE",
+  "NW", "OW", "SG", "SH", "SO", "SZ", "TG", "TI", "UR", "VD", "VS", "ZG", "ZH"
+] as const;
+
+export const cantonCodeSchema = z.enum(CANTON_CODES);
+export type CantonCode = z.infer<typeof cantonCodeSchema>;
+export type CantonSelectionMode = "all" | "specific";
+
+export const analyticsIntentSchema = z.enum([
+  "trend",
+  "winner_ranking",
+  "office_ranking",
+  "procedure_comparison",
+  "cpv_analysis",
+  "current_projects",
+  "canton_comparison"
+]);
+export type AnalyticsIntent = z.infer<typeof analyticsIntentSchema>;
+
+export const analyticsDimensionSchema = z.enum([
+  "month", "quarter", "year", "canton", "winner_name", "proc_office_name_de",
+  "process_type", "cpv_code_main", "publication_date", "title_de", "submission_deadline"
+]);
+export type AnalyticsDimension = z.infer<typeof analyticsDimensionSchema>;
+
+export const analyticsMetricSchema = z.enum([
+  "contract_count", "award_count", "total_award_amount", "avg_award_amount",
+  "avg_submissions", "single_bid_ratio"
+]);
+export type AnalyticsMetric = z.infer<typeof analyticsMetricSchema>;
+
+export const analyticsPlanSchema = z.object({
+  supported: z.boolean(),
+  unsupportedReason: z.string().max(240),
+  intent: analyticsIntentSchema,
+  table: z.enum(["public.archive", "public.projects"]),
+  dimensions: z.array(analyticsDimensionSchema).min(1).max(3),
+  metrics: z.array(analyticsMetricSchema).max(3),
+  filters: z.object({
+    yearFrom: z.number().int().min(1990).max(2100).nullable(),
+    yearTo: z.number().int().min(1990).max(2100).nullable(),
+    dateField: z.enum(["publication_date", "award_decision_date"]),
+    orderTypes: z.array(z.string().min(1).max(80)).max(5),
+    processTypes: z.array(z.string().min(1).max(80)).max(5),
+    pubTypes: z.array(z.string().min(1).max(80)).max(5)
+  }),
+  sort: z.object({
+    key: z.string().min(1).max(60),
+    direction: z.enum(["asc", "desc"])
+  }),
+  limit: z.number().int().min(1).max(1000),
+  plan: z.array(z.string().min(1).max(180)).min(2).max(5),
+  reason: z.string().min(1).max(300),
+  expectedChartType: z.enum(["bar", "line", "area", "pie", "scatter", "composed", "treemap", "table"])
+});
+
+export type AnalyticsPlan = z.infer<typeof analyticsPlanSchema>;
+export type ChartType = AnalyticsPlan["expectedChartType"];
 export type SeriesType = "bar" | "line" | "area";
 export type PlannerSource = "openrouter" | "fallback";
+export type SqlValue = string | number | boolean | Date | string[] | null;
 export type SqlRow = Record<string, string | number | boolean | null>;
 
-export interface PlannerSQLResult {
-  plan: string[];
+export interface CompiledAnalyticsQuery {
   sql: string;
-  reason: string;
-  expectedChartType: ChartType;
-  source?: PlannerSource;
+  params: SqlValue[];
+}
+
+export interface PlannedAnalysis {
+  analyticsPlan: AnalyticsPlan;
+  source: PlannerSource;
+}
+
+export type AgentErrorCode =
+  | "INVALID_REQUEST"
+  | "UNSUPPORTED_TOPIC"
+  | "UNSUPPORTED_ANALYSIS"
+  | "FILTER_CONFLICT"
+  | "PLAN_REJECTED"
+  | "NO_DATA"
+  | "QUERY_FAILED"
+  | "MODEL_UNAVAILABLE"
+  | "RATE_LIMITED";
+
+export interface AgentError {
+  code: AgentErrorCode;
+  message: string;
+  suggestions: string[];
+  retryable: boolean;
+  field?: string;
 }
 
 export interface ChartSeries {
@@ -23,6 +105,8 @@ export interface ChartAgentResult {
   chartType: ChartType;
   xKey: string;
   yKey: string;
+  xAxisLabel: string;
+  yAxisLabel: string;
   series: ChartSeries[];
   stacked: boolean;
   showLegend: boolean;
@@ -36,9 +120,15 @@ export interface ChartAgentResult {
   data: SqlRow[];
 }
 
-export interface AgentChatResponse extends PlannerSQLResult {
+export interface AgentChatResponse {
   userMessage: string;
+  plan: string[];
+  sql: string;
+  reason: string;
+  expectedChartType: ChartType;
   source: PlannerSource;
+  analyticsPlan: AnalyticsPlan;
+  selectedCantons: CantonCode[];
   rows: SqlRow[];
   chartA: ChartAgentResult;
   chartB: ChartAgentResult;
@@ -62,7 +152,7 @@ export type AgentStreamEvent =
   | { type: "data"; rowCount: number; columns: string[] }
   | { type: "candidate"; slot: "chartA" | "chartB"; candidate: ChartAgentResult }
   | { type: "complete"; result: AgentChatResponse }
-  | { type: "error"; stage?: WorkflowStage; message: string };
+  | { type: "error"; stage?: WorkflowStage; error: AgentError };
 
 export interface AgentWorkflowState {
   question?: string;
@@ -75,7 +165,7 @@ export interface AgentWorkflowState {
   chartA?: ChartAgentResult;
   chartB?: ChartAgentResult;
   result?: AgentChatResponse;
-  error?: string;
+  error?: AgentError;
 }
 
 export interface PinnedChart extends ChartAgentResult {

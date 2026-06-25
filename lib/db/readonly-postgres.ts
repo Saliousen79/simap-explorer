@@ -1,5 +1,5 @@
 import { Pool, types } from "pg";
-import { SqlRow } from "@/lib/agents/types";
+import { SqlRow, SqlValue } from "@/lib/agents/types";
 
 types.setTypeParser(20, Number);
 types.setTypeParser(1700, Number);
@@ -32,7 +32,15 @@ function getPool() {
  * In production this points to simap_readonly_user, so the database role
  * is the real security layer and no Supabase service role key is used.
  */
-export async function runReadonlyQuery(sql: string): Promise<SqlRow[]> {
-  const result = await getPool().query(sql);
-  return result.rows as SqlRow[];
+export async function runReadonlyQuery(sql: string, params: SqlValue[] = []): Promise<SqlRow[]> {
+  try {
+    const result = await getPool().query(sql, params);
+    return result.rows as SqlRow[];
+  } catch {
+    const stalePool = pool;
+    pool = null;
+    await stalePool?.end().catch(() => undefined);
+    const result = await getPool().query(sql, params);
+    return result.rows as SqlRow[];
+  }
 }

@@ -32,6 +32,8 @@ export function ChartAgentB(rows: SqlRow[]): ChartAgentResult {
     chartType: hasTimeFields && yKey ? "area" : "table",
     xKey: hasTimeFields ? "period" : xKey,
     yKey: yKey ?? "",
+    xAxisLabel: hasTimeFields ? "Zeitraum" : xKey,
+    yAxisLabel: yKey ?? "Wert",
     series: yKey ? [{ key: yKey, label: yKey, type: hasTimeFields ? "area" : "bar", color: "#818cf8" }] : [],
     stacked: false,
     showLegend: false,

@@ -21,6 +21,7 @@
 html,
 body {
   @apply bg-background text-foreground antialiased;
+  height: 100%;
 }
 
 body {
@@ -32,7 +33,7 @@ body {
 
 /* Liquid glass chat */
 .liquid-chat-shell {
-  @apply relative flex min-h-[calc(100vh-4rem)] flex-1 items-center justify-center px-4 py-8 md:min-h-[calc(100vh-5rem)];
+  @apply relative flex h-[calc(100vh-5.5rem)] flex-1 items-start justify-center overflow-hidden px-4 py-2 md:h-[calc(100vh-6rem)] md:px-6 md:py-2;
 }
 
 .liquid-chat-ambient {
@@ -67,8 +68,8 @@ body {
 }
 
 .liquid-glass-panel {
-  @apply relative z-10 flex w-full max-w-5xl flex-col overflow-hidden rounded-3xl;
-  min-height: min(520px, calc(100vh - 8rem));
+  @apply relative z-10 flex w-full max-w-6xl flex-col overflow-hidden rounded-3xl;
+  height: clamp(430px, 48vh, 560px);
   background: linear-gradient(
     145deg,
     rgba(255, 255, 255, 0.07) 0%,
@@ -85,17 +86,17 @@ body {
 }
 
 .liquid-glass-header {
-  @apply shrink-0 border-b border-white/5 px-5 py-4 text-center;
+  @apply shrink-0 border-b border-white/5 px-6 py-3 text-center;
 }
 
 .liquid-glass-messages {
-  @apply flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4;
+  @apply flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-6 py-5;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 .liquid-glass-bubble {
-  @apply max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed;
+  @apply max-w-[82%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed;
 }
 
 .liquid-glass-bubble.assistant {
@@ -111,11 +112,11 @@ body {
 }
 
 .liquid-glass-suggestions {
-  @apply flex flex-wrap justify-center gap-2 px-4 pb-2;
+  @apply flex flex-wrap justify-center gap-2 px-6 pb-3;
 }
 
 .liquid-glass-chip {
-  @apply rounded-full px-3 py-1.5 text-xs text-muted-foreground transition;
+  @apply rounded-full px-4 py-2 text-sm text-muted-foreground transition;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -130,11 +131,11 @@ body {
 }
 
 .liquid-glass-input-row {
-  @apply flex shrink-0 items-center gap-2 border-t border-white/5 p-3;
+  @apply flex shrink-0 items-center gap-3 border-t border-white/5 p-3;
 }
 
 .liquid-glass-input {
-  @apply min-w-0 flex-1 rounded-xl bg-transparent px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground/60;
+  @apply min-w-0 flex-1 rounded-2xl bg-transparent px-4 py-3.5 text-base text-foreground outline-none placeholder:text-muted-foreground/60;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.15);
 }
@@ -145,7 +146,7 @@ body {
 }
 
 .liquid-glass-send {
-  @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-primary-foreground transition disabled:opacity-40;
+  @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-primary-foreground transition disabled:opacity-40;
   background: linear-gradient(135deg, hsl(var(--primary)), hsl(203 89% 48%));
   border: 1px solid rgba(255, 255, 255, 0.15);
 }

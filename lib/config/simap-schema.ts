@@ -31,7 +31,6 @@ export const ALLOWED_COLUMNS = [
   "cpv_code_main",
   "winner_name",
   "winner_city",
-  "winner_canton",
   "award_amount",
   "award_currency",
   "number_of_submissions",

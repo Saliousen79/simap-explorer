@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import GridLayout, { Layout } from "react-grid-layout";
 import { LayoutDashboard, Trash2, X } from "lucide-react";
 import { ChartRenderer } from "@/components/charts/ChartRenderer";
+import { ChartDownloadButtons } from "@/components/charts/ChartDownloadButtons";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +23,29 @@ function defaultLayout(charts: PinnedChart[]): Layout[] {
     minW: 4,
     minH: 8
   }));
+}
+
+function PinnedChartCard({ chart }: { chart: PinnedChart }) {
+  const chartRef = useRef<HTMLDivElement>(null);
+  return (
+    <Card className="flex h-full min-w-0 flex-col overflow-hidden p-4">
+      <div className="drag-handle mb-3 flex cursor-move items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">{chart.title}</h2>
+          <p className="text-xs text-muted-foreground">{chart.modelLabel} · {new Date(chart.createdAt).toLocaleDateString("de-CH")}</p>
+        </div>
+        <Button size="sm" variant="ghost" onClick={() => removePinnedChart(chart.id)} aria-label="Analyse entfernen">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      <div ref={chartRef} className="min-h-0 min-w-0 flex-1"><ChartRenderer chart={chart} /></div>
+      <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground/80">{chart.question}</p>
+        {chart.insights.slice(0, 2).map((insight) => <p key={insight}>• {insight}</p>)}
+        <ChartDownloadButtons chart={chart} containerRef={chartRef} />
+      </div>
+    </Card>
+  );
 }
 
 export default function DashboardPage() {
@@ -91,22 +115,7 @@ export default function DashboardPage() {
           >
             {pinnedCharts.map((chart) => (
               <div key={chart.id}>
-                <Card className="flex h-full min-w-0 flex-col overflow-hidden p-4">
-                  <div className="drag-handle mb-3 flex cursor-move items-start justify-between gap-3">
-                    <div>
-                      <h2 className="font-semibold">{chart.title}</h2>
-                      <p className="text-xs text-muted-foreground">{chart.modelLabel} · {new Date(chart.createdAt).toLocaleDateString("de-CH")}</p>
-                    </div>
-                    <Button size="sm" variant="ghost" onClick={() => removePinnedChart(chart.id)} aria-label="Analyse entfernen">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="min-h-0 min-w-0 flex-1"><ChartRenderer chart={chart} /></div>
-                  <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                    <p className="font-medium text-foreground/80">{chart.question}</p>
-                    {chart.insights.slice(0, 2).map((insight) => <p key={insight}>• {insight}</p>)}
-                  </div>
-                </Card>
+                <PinnedChartCard chart={chart} />
               </div>
             ))}
           </GridLayout>
