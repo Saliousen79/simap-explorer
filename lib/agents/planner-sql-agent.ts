@@ -26,10 +26,48 @@ function includesAny(prompt: string, terms: string[]) {
   return terms.some((term) => prompt.includes(term));
 }
 
+function clampYear(value: number) {
+  return Math.min(2100, Math.max(1990, value));
+}
+
 function extractYears(prompt: string) {
-  const years = Array.from(prompt.matchAll(/\b(19\d{2}|20\d{2}|2100)\b/g), (match) => Number(match[1]));
-  if (!years.length) return { yearFrom: null, yearTo: null };
-  return { yearFrom: Math.min(...years), yearTo: Math.max(...years) };
+  const explicit = Array.from(prompt.matchAll(/\b(19\d{2}|20\d{2}|2100)\b/g), (match) => Number(match[1]));
+  if (explicit.length) {
+    return { yearFrom: clampYear(Math.min(...explicit)), yearTo: clampYear(Math.max(...explicit)) };
+  }
+  return extractRelativeYears(prompt);
+}
+
+// Relative Zeitangaben wie "in den letzten 6 Jahren", "seit 5 Jahren" oder
+// "letztes Jahr" enthalten keine explizite Jahreszahl. Ohne diese Erkennung
+// würde die kompilierte Query ohne Datumsfilter laufen und das gesamte Archiv
+// aggregieren – das führte zu QUERY_FAILED (Timeout auf dem Serverless-Backend).
+function extractRelativeYears(prompt: string) {
+  const text = normalized(prompt);
+  const currentYear = new Date().getFullYear();
+
+  const since = text.match(/\bseit\s+(\d{1,2})\s+jahr/);
+  if (since) {
+    const years = Number(since[1]);
+    if (years > 0 && years <= 100) {
+      return { yearFrom: clampYear(currentYear - years), yearTo: clampYear(currentYear) };
+    }
+  }
+
+  const last = text.match(/\bletzt\w*\s+(\d{1,2})\s+jahr/);
+  if (last) {
+    const years = Number(last[1]);
+    if (years > 0 && years <= 100) {
+      // inkl. aktuellem (ggf. unvollständigem) Jahr => N Kalenderjahre.
+      return { yearFrom: clampYear(currentYear - years + 1), yearTo: clampYear(currentYear) };
+    }
+  }
+
+  if (/\bletzt\w*\s+jahr\b/.test(text)) {
+    return { yearFrom: clampYear(currentYear - 1), yearTo: clampYear(currentYear - 1) };
+  }
+
+  return { yearFrom: null, yearTo: null };
 }
 
 export function wantsCantonComparison(prompt: string) {

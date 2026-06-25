@@ -78,3 +78,39 @@ test("SQL guard rejects writes and excessive limits", () => {
   assert.throws(() => assertSafeSelectQuery("DELETE FROM public.archive LIMIT 1"));
   assert.throws(() => assertSafeSelectQuery("SELECT canton FROM public.archive LIMIT 1001"));
 });
+
+test("relative time like 'letzte 6 Jahre' produces a date predicate and stays within recent years", () => {
+  const plan = createFallbackAnalyticsPlan("Welche Firmen haben in den letzten 6 Jahren am meisten gewonnen?");
+  const query = compileAnalyticsQuery(plan, ["BL", "BS", "ZH", "AG"]);
+  const currentYear = new Date().getFullYear();
+
+  assert.ok(plan.filters.yearFrom !== null, "yearFrom should be derived from 'letzte 6 Jahre'");
+  assert.ok(plan.filters.yearTo !== null, "yearTo should be derived from 'letzte 6 Jahre'");
+  assert.equal(plan.filters.yearTo, currentYear);
+  assert.equal(plan.filters.yearFrom, currentYear - 6 + 1);
+  // The compiled SQL must contain a bounded date predicate (no full-archive scan).
+  assert.match(query.sql, /publication_date >= \$/);
+  assert.match(query.sql, /publication_date < \$/);
+  // Last parameter is still the canton array; the two leading params are the dates.
+  assert.deepEqual(query.params.at(-1), ["BL", "BS", "ZH", "AG"]);
+  assert.equal(assertSafeSelectQuery(query.sql), query.sql);
+});
+
+test("'seit 5 Jahren' produces a date predicate spanning 6 calendar years", () => {
+  const plan = createFallbackAnalyticsPlan("Gewinner seit 5 Jahren");
+  const query = compileAnalyticsQuery(plan, ["BS"]);
+  const currentYear = new Date().getFullYear();
+
+  assert.equal(plan.filters.yearFrom, currentYear - 5);
+  assert.equal(plan.filters.yearTo, currentYear);
+  assert.match(query.sql, /publication_date >= \$/);
+});
+
+test("questions without any time reference still produce no date predicate", () => {
+  const plan = createFallbackAnalyticsPlan("Welche Firmen haben insgesamt am meisten gewonnen?");
+  const query = compileAnalyticsQuery(plan, ["BS"]);
+
+  assert.equal(plan.filters.yearFrom, null);
+  assert.equal(plan.filters.yearTo, null);
+  assert.doesNotMatch(query.sql, /publication_date/);
+});

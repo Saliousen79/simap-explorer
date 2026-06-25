@@ -111,6 +111,10 @@ async function query(compiled: CompiledAnalyticsQuery): Promise<SqlRow[]> {
     // gesetzt), erhält der Nutzer eine klare Setup-Anweisung statt eines
     // kryptischen Verbindungsfehlers.
     const message = error instanceof Error ? error.message : "";
+    // Den wahren Datenbankfehler serverseitig protokollieren, damit ein
+    // Timeout/Verbindungsabbruch nachvollziehbar bleibt. Die Nutzermeldung
+    // bleibt absichtlich generisch (keine internen Details nach aussen).
+    console.error("[pipeline] Supabase query failed:", message, { sql: compiled.sql, params: compiled.params });
     if (message.includes("DATABASE_READONLY_URL")) {
       throw new AgentWorkflowError({
         code: "QUERY_FAILED",
@@ -119,10 +123,14 @@ async function query(compiled: CompiledAnalyticsQuery): Promise<SqlRow[]> {
         retryable: false
       });
     }
+    // Typische Zeitlimit-Symptome lesbare Hinweise zuordnen.
+    const looksLikeTimeout = /timeout|timed out|ETIMEDOUT|canceling statement|connection terminated|ECONNRESET/i.test(message);
     throw new AgentWorkflowError({
       code: "QUERY_FAILED",
       message: "Die freigegebene Supabase-Abfrage konnte nicht ausgeführt werden.",
-      suggestions: ["Versuche es erneut oder reduziere Zeitraum und Kantonsauswahl."],
+      suggestions: looksLikeTimeout
+        ? ["Die Abfrage lief in ein Zeitlimit. Versuche es erneut oder reduziere Zeitraum und Kantonsauswahl."]
+        : ["Versuche es erneut oder reduziere Zeitraum und Kantonsauswahl."],
       retryable: true
     });
   }
