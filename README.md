@@ -36,3 +36,17 @@ must remain server-side. DeepSeek generates the SQL plan and competes with
 Gemini on the same aggregated query result. Both chart agents return validated
 JSON configurations and short data insights; they never return executable UI
 code.
+
+## Vercel login gate
+
+Set these server-side environment variables on Vercel to protect the app with a
+simple password screen:
+
+```env
+APP_LOGIN_PASSWORD=your-shared-password
+APP_LOGIN_USERNAME=your-login-name
+APP_SESSION_SECRET=your-long-random-session-secret
+```
+
+When any of these variables is missing, the login gate is disabled for local
+development. Do not prefix these variables with `NEXT_PUBLIC_`.

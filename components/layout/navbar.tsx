@@ -1,5 +1,4 @@
-import { Bell, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Bell } from "lucide-react";
 
 export function Navbar() {
   return (
@@ -7,10 +6,7 @@ export function Navbar() {
       <div>
         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">SIMAP Agentic BI</p>
       </div>
-      <div className="flex w-full max-w-xl items-center gap-2">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search charts, prompts, insights..." className="h-9" />
-      </div>
+      <div />
       <button className="rounded-lg border border-border p-2 text-muted-foreground hover:text-foreground">
         <Bell className="h-4 w-4" />
       </button>

@@ -8,7 +8,7 @@ const FORBIDDEN_KEYWORDS = [
 const SQL_WORDS = new Set([
   "as", "select", "from", "where", "group", "by", "order", "limit", "and",
   "or", "not", "is", "null", "desc", "asc", "distinct", "count", "sum", "avg", "min", "max", "round",
-  "coalesce", "date_trunc", "to_char", "date", "text", "numeric", "int"
+  "coalesce", "date_trunc", "to_char", "date", "text", "numeric", "int", "any"
 ]);
 
 function stripCommentsAndStrings(sql: string) {

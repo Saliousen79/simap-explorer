@@ -16,6 +16,7 @@ import {
   ResponsiveContainer,
   Scatter,
   ScatterChart,
+  Treemap,
   Tooltip,
   XAxis,
   YAxis
@@ -23,6 +24,15 @@ import {
 import { ChartAgentResult, ChartSeries } from "@/lib/agents/types";
 
 const FALLBACK_COLORS = ["#38bdf8", "#818cf8", "#34d399", "#f59e0b"];
+const TOOLTIP_CONTENT_STYLE = {
+  backgroundColor: "#111827",
+  border: "1px solid #334155",
+  borderRadius: "12px",
+  boxShadow: "0 14px 30px rgba(0, 0, 0, 0.4)",
+  color: "#f8fafc"
+};
+const TOOLTIP_LABEL_STYLE = { color: "#f8fafc", fontWeight: 600, marginBottom: "6px" };
+const TOOLTIP_ITEM_STYLE = { color: "#cbd5e1" };
 
 function formatCell(value: unknown, key?: string) {
   if (typeof value === "number") {
@@ -36,9 +46,26 @@ function GridAndAxes({ chart }: { chart: ChartAgentResult }) {
   return (
     <>
       <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.18)" />
-      <XAxis dataKey={chart.xKey} stroke="#94a3b8" tick={{ fontSize: 11 }} />
-      <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} tickFormatter={(value) => formatCell(value)} />
-      <Tooltip formatter={(value, name) => [formatCell(value, String(name)), name]} />
+      <XAxis
+        dataKey={chart.xKey}
+        stroke="#94a3b8"
+        tick={{ fontSize: 11 }}
+        label={{ value: chart.xAxisLabel, position: "insideBottom", offset: -8, fill: "#cbd5e1", fontSize: 11 }}
+      />
+      <YAxis
+        width={82}
+        stroke="#94a3b8"
+        tick={{ fontSize: 11 }}
+        tickFormatter={(value) => formatCell(value)}
+        label={{ value: chart.yAxisLabel, angle: -90, position: "insideLeft", fill: "#cbd5e1", fontSize: 11 }}
+      />
+      <Tooltip
+        contentStyle={TOOLTIP_CONTENT_STYLE}
+        labelStyle={TOOLTIP_LABEL_STYLE}
+        itemStyle={TOOLTIP_ITEM_STYLE}
+        cursor={{ fill: "rgba(148, 163, 184, 0.08)" }}
+        formatter={(value, name) => [formatCell(value, String(name)), name]}
+      />
       {chart.showLegend ? <Legend /> : null}
     </>
   );
@@ -49,6 +76,11 @@ function renderSeries(series: ChartSeries, stacked: boolean) {
   if (series.type === "line") return <Line {...common} type="monotone" strokeWidth={2} dot={false} />;
   if (series.type === "area") return <Area {...common} type="monotone" fill={series.color} fillOpacity={0.2} />;
   return <Bar {...common} fill={series.color} stackId={stacked ? "stack" : undefined} radius={[6, 6, 0, 0]} />;
+}
+
+function usesHorizontalBars(chart: ChartAgentResult) {
+  if (chart.chartType !== "bar" || typeof chart.data[0]?.[chart.xKey] !== "string") return false;
+  return chart.data.length > 5 || chart.data.some((row) => String(row[chart.xKey] ?? "").length > 12);
 }
 
 export function ChartRenderer({ chart }: { chart: ChartAgentResult }) {
@@ -76,7 +108,7 @@ export function ChartRenderer({ chart }: { chart: ChartAgentResult }) {
     );
   }
 
-  const commonProps = { data: chart.data, margin: { top: 8, right: 16, left: 4, bottom: 8 } };
+  const commonProps = { data: chart.data, margin: { top: 8, right: 16, left: 12, bottom: 28 } };
 
   if (chart.chartType === "pie") {
     const series = chart.series[0];
@@ -86,7 +118,12 @@ export function ChartRenderer({ chart }: { chart: ChartAgentResult }) {
           <Pie data={chart.data.slice(0, 12)} dataKey={series.key} nameKey={chart.xKey} outerRadius="78%" label>
             {chart.data.slice(0, 12).map((_, index) => <Cell key={index} fill={FALLBACK_COLORS[index % FALLBACK_COLORS.length]} />)}
           </Pie>
-          <Tooltip formatter={(value) => formatCell(value, series.key)} />
+          <Tooltip
+            contentStyle={TOOLTIP_CONTENT_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
+            formatter={(value) => formatCell(value, series.key)}
+          />
           {chart.showLegend ? <Legend /> : null}
         </PieChart>
       </ResponsiveContainer>
@@ -99,9 +136,26 @@ export function ChartRenderer({ chart }: { chart: ChartAgentResult }) {
       <ResponsiveContainer width="100%" height="100%">
         <ScatterChart {...commonProps}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.18)" />
-          <XAxis type="number" dataKey={chart.xKey} name={chart.xKey} stroke="#94a3b8" />
-          <YAxis type="number" dataKey={series.key} name={series.label} stroke="#94a3b8" />
-          <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+          <XAxis
+            type="number"
+            dataKey={chart.xKey}
+            name={chart.xAxisLabel}
+            stroke="#94a3b8"
+            label={{ value: chart.xAxisLabel, position: "insideBottom", offset: -8, fill: "#cbd5e1", fontSize: 11 }}
+          />
+          <YAxis
+            type="number"
+            dataKey={series.key}
+            name={chart.yAxisLabel}
+            stroke="#94a3b8"
+            label={{ value: chart.yAxisLabel, angle: -90, position: "insideLeft", fill: "#cbd5e1", fontSize: 11 }}
+          />
+          <Tooltip
+            contentStyle={TOOLTIP_CONTENT_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
+            cursor={{ strokeDasharray: "3 3", stroke: "#64748b" }}
+          />
           <Scatter data={chart.data} fill={series.color} name={series.label} />
         </ScatterChart>
       </ResponsiveContainer>
@@ -137,6 +191,72 @@ export function ChartRenderer({ chart }: { chart: ChartAgentResult }) {
           <GridAndAxes chart={chart} />
           {chart.series.map((series) => <Area key={series.key} dataKey={series.key} name={series.label} type="monotone" stroke={series.color} fill={series.color} fillOpacity={0.2} stackId={chart.stacked ? "stack" : undefined} />)}
         </AreaChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  if (chart.chartType === "treemap") {
+    const series = chart.series[0];
+    return (
+      <div className="flex h-full min-h-0 flex-col gap-2">
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+          <span>{chart.xAxisLabel}</span>
+          <span>{chart.yAxisLabel}</span>
+        </div>
+        <div className="min-h-0 flex-1">
+          <ResponsiveContainer width="100%" height="100%">
+            <Treemap
+              data={chart.data}
+              dataKey={series.key}
+              nameKey={chart.xKey}
+              stroke="#0f172a"
+              fill={series.color}
+              aspectRatio={4 / 3}
+            >
+              <Tooltip
+                contentStyle={TOOLTIP_CONTENT_STYLE}
+                labelStyle={TOOLTIP_LABEL_STYLE}
+                itemStyle={TOOLTIP_ITEM_STYLE}
+                formatter={(value) => formatCell(value, series.key)}
+              />
+            </Treemap>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  }
+
+  if (usesHorizontalBars(chart)) {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart {...commonProps} layout="vertical" margin={{ top: 8, right: 20, left: 8, bottom: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.18)" horizontal={false} />
+          <XAxis
+            type="number"
+            stroke="#94a3b8"
+            tick={{ fontSize: 11 }}
+            tickFormatter={(value) => formatCell(value)}
+            label={{ value: chart.yAxisLabel, position: "insideBottom", offset: -8, fill: "#cbd5e1", fontSize: 11 }}
+          />
+          <YAxis
+            type="category"
+            dataKey={chart.xKey}
+            width={155}
+            stroke="#94a3b8"
+            tick={{ fontSize: 10 }}
+            interval={0}
+            label={{ value: chart.xAxisLabel, angle: -90, position: "insideLeft", fill: "#cbd5e1", fontSize: 11 }}
+          />
+          <Tooltip
+            contentStyle={TOOLTIP_CONTENT_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
+            cursor={{ fill: "rgba(148, 163, 184, 0.08)" }}
+            formatter={(value, name) => [formatCell(value, String(name)), name]}
+          />
+          {chart.showLegend ? <Legend /> : null}
+          {chart.series.map((series) => <Bar key={series.key} dataKey={series.key} name={series.label} fill={series.color} radius={[0, 6, 6, 0]} />)}
+        </BarChart>
       </ResponsiveContainer>
     );
   }
