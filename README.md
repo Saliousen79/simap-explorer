@@ -138,3 +138,8 @@ Supabase / Postgres · OpenRouter (DeepSeek, Gemini) · Vercel-Deployment
 ## Lizenz
 
 MIT – siehe [LICENSE](LICENSE).
+
+## Sicherheit
+
+Umgang mit Secrets, was öffentlich/privat ist und die Rotations-Checkliste
+stehen in [docs/SECURITY.md](docs/SECURITY.md).
