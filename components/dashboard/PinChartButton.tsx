@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Pin } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ChartAgentResult, PinnedChart, PlannerSource } from "@/lib/agents/types";
 
@@ -41,6 +42,7 @@ export function PinChartButton({
   sql: string;
   plannerSource: PlannerSource;
 }) {
+  const router = useRouter();
   const [isPinned, setIsPinned] = useState(false);
 
   const onPin = () => {
@@ -55,6 +57,7 @@ export function PinChartButton({
     };
     writePinnedCharts([...getPinnedCharts(), pinnedChart]);
     setIsPinned(true);
+    router.push("/dashboard");
   };
 
   return (
