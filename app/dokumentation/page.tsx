@@ -71,6 +71,58 @@ export default function DokumentationPage() {
 
       <section className="space-y-6">
         <div className="border-b border-border pb-3">
+          <h2 className="text-2xl font-semibold tracking-tight">API &amp; Agenten-Kommunikation</h2>
+        </div>
+        <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+          Die Pipeline läuft serverseitig über <span className="font-mono text-foreground">POST /api/agent/chat</span>.
+          Die Antwort wird als NDJSON-Stream geliefert – ein JSON-Objekt pro Zeile –, damit die
+          Oberfläche jede Stufe live anzeigen kann (<span className="font-mono text-foreground">stage</span>,
+          <span className="font-mono text-foreground"> plan</span>,
+          <span className="font-mono text-foreground"> sql</span>,
+          <span className="font-mono text-foreground"> data</span>,
+          <span className="font-mono text-foreground"> candidate</span>,
+          <span className="font-mono text-foreground"> complete</span>).
+        </p>
+        <div className="rounded-2xl border border-border/60 bg-card/40 p-6">
+          <h3 className="text-base font-semibold text-foreground">Data-flow statt Konversation</h3>
+          <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">
+            Die Agenten führen kein LLM-zu-LLM-Gespräch. Jede Stufe erzeugt ein validiertes JSON-Objekt,
+            das die nächste als Eingabe erhält. So bleibt jeder Schritt deterministisch, testbar und
+            abschirmbar – ein Agent kann dem nächsten keine Anweisungen einschleusen, weil die
+            Übergänge nur Daten enthalten.
+          </p>
+          <pre className="mt-4 overflow-x-auto rounded-xl bg-background/60 p-4 font-mono text-xs leading-6 text-muted-foreground">{`Nutzerfrage
+   │  JSON: { message, selectedCantons }
+   ▼
+Planner (DeepSeek)  ──►  Analyseplan (JSON-Schema)
+   ▼
+SQL-Compiler  ──►  validiertes SQL + Bind-Parameter
+   ▼
+Supabase  ──►  Ergebniszeilen (JSON)
+   ▼
+Chart-Agent A (DeepSeek)  ┐  parallel, identische Eingabe,
+Chart-Agent B (Gemini)    ┘  ohne Kenntnis voneinander
+   ▼
+zwei Chart-Konfigurationen → Dashboard`}</pre>
+        </div>
+        <ul className="max-w-2xl space-y-2 text-sm leading-7 text-muted-foreground">
+          <li className="flex gap-3">
+            <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+            <span><span className="text-foreground">Strukturierte Antworten:</span> alle LLM-Aufrufe erzwingen JSON via <span className="font-mono text-foreground">json_schema</span> – kein Freitext, kein Code.</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+            <span><span className="text-foreground">Unabhängige Agenten:</span> die beiden Chart-Agenten arbeiten parallel mit identischer Eingabe; fällt eines aus, übernimmt ein lokaler Fallback.</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+            <span><span className="text-foreground">Orchestrierung an einem Ort:</span> <span className="font-mono text-foreground">lib/agents/pipeline.ts</span> steuert die Reihenfolge, die API-Route ist nur ein schlanker Streaming-Wrapper.</span>
+          </li>
+        </ul>
+      </section>
+
+      <section className="space-y-6">
+        <div className="border-b border-border pb-3">
           <h2 className="text-2xl font-semibold tracking-tight">Datenbasis</h2>
         </div>
         <p className="max-w-2xl text-sm leading-7 text-muted-foreground">

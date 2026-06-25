@@ -35,6 +35,62 @@ Guardrails sind durchgehend aktiv: Prompt-Guard, SQL-Guard und Kantonsprüfung
 schließen Freitext-SQL und Schreibzugriffe strukturell aus. Die ausführliche
 Pipeline-Darstellung steht in der App unter **/dokumentation**.
 
+## API & Agenten-Kommunikation
+
+Die Pipeline läuft serverseitig über den Endpunkt **`POST /api/agent/chat`**.
+Die Antwort wird als **NDJSON-Stream** (`application/x-ndjson`) geliefert –
+ein JSON-Objekt pro Zeile – damit die UI jede Stufe live anzeigen kann:
+
+```
+{"type":"stage","stage":"planning","status":"running",...}
+{"type":"plan","plan":[...],"reason":"..."}
+{"type":"sql","sql":"SELECT ...","source":"openrouter"}
+{"type":"data","rowCount":12,"columns":["winner_name","award_count"]}
+{"type":"candidate","slot":"chartA","candidate":{...}}
+{"type":"candidate","slot":"chartB","candidate":{...}}
+{"type":"complete","result":{...}}
+```
+
+### Wie die LLMs miteinander kommunizieren – und wie nicht
+
+Das Multi-Agenten-Setup ist **data-flow-basiert, nicht konversationell**: die
+Agenten führen **kein LLM-zu-LLM-Gespräch**. Stattdessen erzeugt jede Stufe ein
+validiertes JSON-Datenobjekt, das die nächste als Eingabe erhält:
+
+```
+Nutzerfrage
+   │  (JSON: {message, selectedCantons})
+   ▼
+Planner (DeepSeek)  ──►  Analyseplan (JSON-Schema)
+   │                         │
+   ▼                         ▼
+SQL-Compiler  ──►  validiertes SQL + Bind-Parameter
+   │                         │
+   ▼                         ▼
+Supabase  ──►  Ergebniszeilen (JSON)
+   │                         │
+   ▼                         ▼
+Chart-Agent A (DeepSeek)  ─┐  beide parallel, identische Eingabe
+Chart-Agent B (Gemini)     ┘  keine Kommunikation untereinander
+   │
+   ▼
+zwei Chart-Konfigurationen → Dashboard
+```
+
+Eigenschaften, die das Setup sicher und testbar machen:
+
+- **Strukturierte Antworten:** Alle LLM-Aufrufe erzwingen JSON via
+  `response_format: json_schema` (`lib/ai/openrouter.ts`). Kein Freitext, kein
+  Code, kein Markdown – die Rückgabe ist direkt ein getyptes Objekt.
+- **Keine Befehle in Daten:** Analyseplan und Ergebniszeilen sind reine Daten,
+  nie Anweisungen. Befehle in Textwerten werden ignoriert (Prompt-Injektion-Schutz).
+- **Unabhängige Agenten:** Die beiden Chart-Agenten arbeiten parallel mit
+  identischer Eingabe und ohne Kenntnis voneinander. Fällt eines aus,
+  übernimmt der lokale Fallback-Agent (`chart-agent-a.ts` / `-b.ts`).
+- **Orchestrierung an einem Ort:** Die gesamte Reihenfolge und Übergabe steckt
+  in `lib/agents/pipeline.ts`. Die API-Route (`app/api/agent/chat/route.ts`)
+  ist nur ein schlanker HTTP-/Streaming-Wrapper.
+
 ---
 
 ## Projektstruktur
@@ -60,7 +116,8 @@ simap-explorer/
 │
 ├── lib/
 │   ├── agents/               # Pipeline-Logik
-│   │   ├── openrouter-sql-agent.ts      # Stufe 1: Planner
+│   │   ├── pipeline.ts                  # Orchestrierung: alle 4 Stufen (KISS, kommentiert)
+│   │   ├── openrouter-sql-agent.ts      # Stufe 1: Planner (DeepSeek)
 │   │   ├── analytics-query-compiler.ts  # Stufe 2: SQL-Kompilierung
 │   │   ├── planner-sql-agent.ts         # Fallback-Planner + Normalisierung
 │   │   ├── openrouter-chart-agent.ts    # Stufe 4: Chart-Agent (OpenRouter)
