@@ -33,7 +33,7 @@ body {
 
 /* Liquid glass chat */
 .liquid-chat-shell {
-  @apply relative flex h-[calc(100vh-5.5rem)] flex-1 items-start justify-center overflow-hidden px-4 py-2 md:h-[calc(100vh-6rem)] md:px-6 md:py-2;
+  @apply relative flex min-h-[calc(100vh-5.5rem)] flex-1 items-start justify-center overflow-y-auto px-4 py-2 md:min-h-[calc(100vh-6rem)] md:px-6 md:py-2;
 }
 
 .liquid-chat-ambient {
@@ -69,7 +69,7 @@ body {
 
 .liquid-glass-panel {
   @apply relative z-10 flex w-full max-w-6xl flex-col overflow-hidden rounded-3xl;
-  height: clamp(430px, 48vh, 560px);
+  height: clamp(620px, 68vh, 820px);
   background: linear-gradient(
     145deg,
     rgba(255, 255, 255, 0.07) 0%,
