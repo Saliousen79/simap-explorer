@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Bot, Info, LayoutDashboard, PanelLeftClose } from "lucide-react";
+import { BarChart3, Bot, FileText, LayoutDashboard, PanelLeftClose } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/", label: "Chat", icon: Bot },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/about", label: "About", icon: Info }
+  { href: "/dokumentation", label: "Dokumentation", icon: FileText }
 ];
 
 export function Sidebar() {

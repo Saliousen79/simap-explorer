@@ -43,7 +43,7 @@ export function CantonSelector({ selected, mode, onChange, invalid = false }: Ca
       </div>
 
       <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,2.4fr)_minmax(270px,0.75fr)]">
-        <div className="relative flex min-h-[210px] items-center justify-center overflow-visible p-1 lg:h-[24vh] lg:min-h-[220px] lg:max-h-[270px]">
+        <div className="relative flex min-h-[185px] items-center justify-center overflow-visible p-1 lg:h-[20vh] lg:min-h-[190px] lg:max-h-[230px]">
           <svg viewBox={SWISS_CANTON_VIEWBOX} className="h-full w-full drop-shadow-sm" role="group" aria-label="Interaktive Karte der Schweizer Kantone">
             <g className="opacity-70">
               {SWISS_CANTON_PATHS.map((canton) => (
@@ -84,7 +84,7 @@ export function CantonSelector({ selected, mode, onChange, invalid = false }: Ca
           </svg>
         </div>
 
-        <div className="flex min-h-[210px] flex-col rounded-2xl border border-border/70 bg-card/45 p-3 backdrop-blur-md lg:h-[24vh] lg:min-h-[220px] lg:max-h-[270px]">
+        <div className="flex min-h-[185px] flex-col rounded-2xl border border-border/70 bg-card/45 p-3 backdrop-blur-md lg:h-[20vh] lg:min-h-[190px] lg:max-h-[230px]">
           <label className="mb-3 flex items-center gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2.5 shadow-sm">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Kanton suchen" className="min-w-0 flex-1 bg-transparent text-sm outline-none" aria-label="Kanton suchen" />

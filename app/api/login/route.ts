@@ -17,7 +17,9 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null) as { username?: string; password?: string } | null;
-  if (body?.username !== configuredUsername || body.password !== configuredPassword) {
+  const username = body?.username?.trim();
+  const password = body?.password?.trim();
+  if (username !== configuredUsername || password !== configuredPassword) {
     return NextResponse.json({ error: "Invalid password." }, { status: 401 });
   }
 

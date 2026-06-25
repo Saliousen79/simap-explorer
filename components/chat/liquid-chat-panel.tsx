@@ -40,12 +40,12 @@ export function LiquidChatPanel() {
   };
 
   return (
-    <div className="flex h-full w-full max-w-6xl flex-col items-center justify-start gap-3 pt-0">
+    <div className="flex h-full w-full max-w-6xl flex-col items-center justify-start gap-2 pt-0">
       <div className="max-w-4xl text-center">
-        <p className="text-balance text-3xl font-semibold leading-tight text-foreground md:text-5xl">
+        <p className="text-balance text-3xl font-semibold leading-tight text-foreground md:text-4xl">
           Schweizer Vergaben verstehen, bevor andere sie übersehen.
         </p>
-        <p className="mt-2 text-balance text-base text-muted-foreground md:text-lg">
+        <p className="mt-1 text-balance text-base text-muted-foreground md:text-lg">
           Analysiere über 200.000 offizielle Aufträge von{" "}
           <a href="https://www.simap.ch" target="_blank" rel="noreferrer" className="text-primary underline-offset-4 transition hover:underline">
             simap.ch
@@ -57,11 +57,6 @@ export function LiquidChatPanel() {
       <CantonSelector selected={selectedCantons} mode={selectionMode} onChange={(next, mode) => { setSelectedCantons(next); setSelectionMode(mode); }} invalid={selectionInvalid} />
 
       <motion.div initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }} className="liquid-glass-panel">
-        <header className="liquid-glass-header">
-          <h1 className="text-sm font-medium tracking-wide text-foreground/90">SIMAP Explorer</h1>
-          <p className="text-xs text-muted-foreground/80">Ausschreibungen sicher analysieren</p>
-        </header>
-
         <motion.div ref={scrollRef} className="liquid-glass-messages">
           {messages.map((message) => <ChatMessageCard key={message.id} message={message} />)}
           {isLoading ? <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start"><span className="liquid-glass-bubble assistant"><span className="liquid-typing"><span /><span /><span /></span></span></motion.div> : null}
