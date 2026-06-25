@@ -112,7 +112,7 @@ function TreemapCell(props: any) {
     <g>
       <rect x={x} y={y} width={safeWidth} height={safeHeight} fill={fill} fillOpacity={0.92} stroke="#0f172a" strokeWidth={2} />
       {isTooSmall ? (
-        <text x={x + safeWidth / 2} y={y + safeHeight / 2} textAnchor="middle" verticalAnchor="middle" fill="#0b1220" fontSize={nameFont} fontWeight={700}>
+        <text x={x + safeWidth / 2} y={y + safeHeight / 2} dx={0} dy={nameFont / 3} textAnchor="middle" fill="#0b1220" fontSize={nameFont} fontWeight={700}>
           {String(name).slice(0, 3)}.
         </text>
       ) : (
