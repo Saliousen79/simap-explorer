@@ -3,6 +3,8 @@ import { z } from "zod";
 import { compileAnalyticsQuery } from "@/lib/agents/analytics-query-compiler";
 import { OpenRouterChartAgent } from "@/lib/agents/openrouter-chart-agent";
 import { OpenRouterAnalyticsPlanner } from "@/lib/agents/openrouter-sql-agent";
+import { ChartAgentA } from "@/lib/agents/chart-agent-a";
+import { ChartAgentB } from "@/lib/agents/chart-agent-b";
 import { createFallbackAnalyticsPlan, normalizeAnalyticsPlan } from "@/lib/agents/planner-sql-agent";
 import {
   AgentChatResponse, AgentError, AgentStreamEvent, CANTON_CODES, cantonCodeSchema,
@@ -170,26 +172,32 @@ export async function POST(request: Request) {
         });
         let chartA;
         let chartB;
-        try {
-          [chartA, chartB] = await Promise.all([chartAPromise, chartBPromise]);
-        } catch {
-          throw new AgentWorkflowError({
-            code: "MODEL_UNAVAILABLE",
-            message: "Mindestens ein Diagramm-Modell ist derzeit nicht verfügbar.",
-            suggestions: ["Versuche die Analyse später erneut."],
-            retryable: true
-          });
+        const [settledA, settledB] = await Promise.allSettled([chartAPromise, chartBPromise]);
+        if (settledA.status === "fulfilled") {
+          chartA = settledA.value;
+        } else {
+          chartA = { ...ChartAgentA(rows), model: "local-fallback", modelLabel: "Lokaler Fallback (A)" };
+        }
+        if (settledB.status === "fulfilled") {
+          chartB = settledB.value;
+        } else {
+          chartB = { ...ChartAgentB(rows), model: "local-fallback", modelLabel: "Lokaler Fallback (B)" };
         }
         if (rows.length > 1 && chartA.chartType === chartB.chartType) {
-          chartB = await OpenRouterChartAgent({
-            ...commonChartInput, model: CHART_MODEL_B, modelLabel: "Gemini 3.1 Flash Lite",
-            perspective: "Erzeuge eine fachlich korrekte Alternative zum vorhandenen Diagramm.",
-            forbiddenChartTypes: [chartA.chartType]
-          });
+          try {
+            chartB = await OpenRouterChartAgent({
+              ...commonChartInput, model: CHART_MODEL_B, modelLabel: "Gemini 3.1 Flash Lite",
+              perspective: "Erzeuge eine fachlich korrekte Alternative zum vorhandenen Diagramm.",
+              forbiddenChartTypes: [chartA.chartType]
+            });
+          } catch {
+            chartB = { ...ChartAgentB(rows), model: "local-fallback", modelLabel: "Lokaler Fallback (B)" };
+          }
         }
+        const usedFallback = chartA.model === "local-fallback" || chartB.model === "local-fallback";
         send({ type: "candidate", slot: "chartA", candidate: chartA });
         send({ type: "candidate", slot: "chartB", candidate: chartB });
-        stage("charts", "complete", "Beide Diagrammvorschläge sind bereit.");
+        stage("charts", "complete", usedFallback ? "Diagramme bereit – mindestens ein LLM-Modell war nicht erreichbar, lokale Ersatzdarstellung aktiv." : "Beide Diagrammvorschläge sind bereit.");
 
         const result: AgentChatResponse = {
           userMessage: input.message,
