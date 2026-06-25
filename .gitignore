@@ -1,16 +1,35 @@
-.DS_Store
+# Dependencies
 node_modules
 .pnpm-store
+
+# Build output
 .next
 out
+build
+dist
 *.tsbuildinfo
-pnpm-lock.yaml
-pnpm-workspace.yaml
 
-.env
-.env*.local
-
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# Environment (niemals committen)
+.env
+.env*.local
+
+# Betriebssysteme
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editoren / IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Paketmanager-Alternativen (Projekt nutzt npm)
+pnpm-lock.yaml
+pnpm-workspace.yaml

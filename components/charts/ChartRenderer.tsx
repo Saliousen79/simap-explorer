@@ -21,7 +21,9 @@ import {
   XAxis,
   YAxis
 } from "recharts";
-import { ChartAgentResult, ChartSeries } from "@/lib/agents/types";
+import { ChartAgentResult, ChartSeries, SqlRow } from "@/lib/agents/types";
+
+const TREEMAP_PALETTE = ["#38bdf8", "#818cf8", "#34d399", "#f59e0b", "#f472b6", "#22d3ee"];
 
 const FALLBACK_COLORS = ["#38bdf8", "#818cf8", "#34d399", "#f59e0b"];
 const TOOLTIP_CONTENT_STYLE = {
@@ -81,6 +83,50 @@ function renderSeries(series: ChartSeries, stacked: boolean) {
 function usesHorizontalBars(chart: ChartAgentResult) {
   if (chart.chartType !== "bar" || typeof chart.data[0]?.[chart.xKey] !== "string") return false;
   return chart.data.length > 5 || chart.data.some((row) => String(row[chart.xKey] ?? "").length > 12);
+}
+
+function TreemapCell(props: any) {
+  const { x, y, width, height, root, depth, payload, xKey, valueKey } = props as {
+    x: number; y: number; width: number; height: number;
+    root: any; depth?: number; payload: SqlRow | undefined; xKey: string; valueKey: string;
+  };
+  if (!root || depth == null) return null;
+  const isTooSmall = width < 36 || height < 22;
+  const name = String(payload?.[xKey] ?? "");
+  const value = formatCell(payload?.[valueKey], valueKey);
+  const safeWidth = Math.max(width, 0);
+  const safeHeight = Math.max(height, 0);
+
+  const baseFont = Math.min(safeWidth / 14, safeHeight / 6, 14);
+  const nameFont = Math.max(Math.min(baseFont, isTooSmall ? 9 : 13), 8);
+  const valueFont = Math.max(nameFont - 3, 8);
+
+  const siblings = (root && root.children) || [];
+  const index = siblings.findIndex((c: any) => c === props);
+  const fill = TREEMAP_PALETTE[Math.max(index, 0) % TREEMAP_PALETTE.length];
+
+  const maxNameChars = Math.max(Math.floor((safeWidth - 24) / (nameFont * 0.55)), 4);
+  const displayName = name.length * nameFont * 0.55 > safeWidth - 16 ? name.slice(0, maxNameChars) + "…" : name;
+
+  return (
+    <g>
+      <rect x={x} y={y} width={safeWidth} height={safeHeight} fill={fill} fillOpacity={0.92} stroke="#0f172a" strokeWidth={2} />
+      {isTooSmall ? (
+        <text x={x + safeWidth / 2} y={y + safeHeight / 2} textAnchor="middle" verticalAnchor="middle" fill="#0b1220" fontSize={nameFont} fontWeight={700}>
+          {String(name).slice(0, 3)}.
+        </text>
+      ) : (
+        <>
+          <text x={x + 8} y={y + nameFont + 8} fill="#0b1220" fontSize={nameFont} fontWeight={700}>
+            {displayName}
+          </text>
+          <text x={x + 8} y={y + nameFont + valueFont + 12} fill="#0b1220" fontSize={valueFont} opacity={0.85}>
+            {value}
+          </text>
+        </>
+      )}
+    </g>
+  );
 }
 
 export function ChartRenderer({ chart }: { chart: ChartAgentResult }) {
@@ -212,6 +258,8 @@ export function ChartRenderer({ chart }: { chart: ChartAgentResult }) {
               stroke="#0f172a"
               fill={series.color}
               aspectRatio={4 / 3}
+              isAnimationActive={false}
+              content={<TreemapCell xKey={chart.xKey} valueKey={series.key} />}
             >
               <Tooltip
                 contentStyle={TOOLTIP_CONTENT_STYLE}
