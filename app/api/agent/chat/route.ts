@@ -1,30 +1,38 @@
+/**
+ * API-Route /api/agent/chat
+ * =========================
+ *
+ * HTTP-Einstiegspunkt der Agenten-Pipeline. Diese Datei ist bewusst SCHLANK
+ * (KISS): sie kümmert sich nur um HTTP – Request-Validierung, Rate-Limit und
+ * NDJSON-Streaming – und delegiert die gesamte Agenten-Logik an
+ * runAgentPipeline (lib/agents/pipeline.ts).
+ *
+ * Streaming-Protokoll: Antwort ist "application/x-ndjson" – ein JSON-Objekt
+ * pro Zeile. Jede Stufe der Pipeline schickt Events (stage, plan, sql, data,
+ * candidate, complete, error), die der Client live anzeigt.
+ */
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { compileAnalyticsQuery } from "@/lib/agents/analytics-query-compiler";
-import { OpenRouterChartAgent } from "@/lib/agents/openrouter-chart-agent";
-import { OpenRouterAnalyticsPlanner } from "@/lib/agents/openrouter-sql-agent";
-import { ChartAgentA } from "@/lib/agents/chart-agent-a";
-import { ChartAgentB } from "@/lib/agents/chart-agent-b";
-import { createFallbackAnalyticsPlan, normalizeAnalyticsPlan } from "@/lib/agents/planner-sql-agent";
+import { runAgentPipeline } from "@/lib/agents/pipeline";
 import {
-  AgentChatResponse, AgentError, AgentStreamEvent, CANTON_CODES, cantonCodeSchema,
-  PlannerSource, WorkflowStage
+  AgentError, CANTON_CODES, cantonCodeSchema
 } from "@/lib/agents/types";
-import { runReadonlyQuery } from "@/lib/db/readonly-postgres";
 import {
   AgentWorkflowError, assertCantonSelectionMatchesPrompt, assertPromptAllowed, toAgentError
 } from "@/lib/security/prompt-guard";
-import { assertSafeSelectQuery } from "@/lib/security/sql-guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const CHART_MODEL_A = process.env.OPENROUTER_CHART_MODEL_A ?? "deepseek/deepseek-v4-flash";
-const CHART_MODEL_B = process.env.OPENROUTER_CHART_MODEL_B ?? "google/gemini-3.1-flash-lite";
+// Einfaches In-Memory-Rate-Limit (pro IP, 15 Anfragen / 5 Min).
+// Hinweis: auf Vercel-Serverless wirkt dies nur pro Instanz – für ein
+// Studienprojekt ausreichend; für echte Skalierung würde man Redis nutzen.
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const RATE_LIMIT_REQUESTS = 15;
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
 
+// Validierung des Request-Bodies: Frage + Kantonsauswahl + Modus.
 const requestSchema = z.object({
   message: z.string().trim().min(3, "Die Frage muss mindestens 3 Zeichen enthalten.").max(800, "Die Frage darf höchstens 800 Zeichen enthalten."),
   selectedCantons: z.array(cantonCodeSchema).max(CANTON_CODES.length),
@@ -45,30 +53,7 @@ function errorResponse(error: AgentError, status: number) {
   return NextResponse.json({ error }, { status });
 }
 
-function queryErrorDetail(error: unknown): AgentError {
-  const message = error instanceof Error ? error.message : "";
-  console.error("SIMAP query failed", {
-    message,
-    code: typeof error === "object" && error && "code" in error ? String(error.code) : undefined
-  });
-
-  if (message.includes("DATABASE_READONLY_URL")) {
-    return {
-      code: "QUERY_FAILED",
-      message: "Die Datenbank-Verbindung ist auf Vercel nicht konfiguriert.",
-      suggestions: ["Setze DATABASE_READONLY_URL in den Vercel Environment Variables für Production und deploye erneut."],
-      retryable: false
-    };
-  }
-
-  return {
-    code: "QUERY_FAILED",
-    message: "Die freigegebene Supabase-Abfrage konnte nicht ausgeführt werden.",
-    suggestions: ["Versuche es erneut oder reduziere Zeitraum und Kantonsauswahl."],
-    retryable: true
-  };
-}
-
+/** Prüft, ob die IP noch im erlaubten Fenster liegt, sonst RATE_LIMITED. */
 function assertWithinRateLimit(request: Request) {
   const key = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || request.headers.get("x-real-ip") || "local";
@@ -90,6 +75,8 @@ function assertWithinRateLimit(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // 1) Request-Validierung + Guardrails (Prompt-Guard, Kantons-Konsistenz).
+  //    Diese Checks laufen VOR der Pipeline, um ungültige Anfragen früh abzuweisen.
   let input: z.infer<typeof requestSchema>;
   try {
     assertWithinRateLimit(request);
@@ -110,111 +97,21 @@ export async function POST(request: Request) {
     return errorResponse(detail, detail.code === "RATE_LIMITED" ? 429 : 400);
   }
 
+  // 2) Streaming-Antwort aufbauen und Pipeline starten.
+  //    runAgentPipeline schreibt Events als NDJSON-Zeilen in den Stream.
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const startedAt = Date.now();
-      let activeStage: WorkflowStage = "planning";
-      const send = (event: AgentStreamEvent) => controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
-      const stage = (id: WorkflowStage, status: "running" | "complete" | "error", detail?: string) => {
-        if (status === "running") activeStage = id;
-        send({ type: "stage", stage: id, status, detail });
-      };
-
+      const emit = (event: unknown) => controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
       try {
-        stage("planning", "running", "Die Frage wird einem erlaubten SIMAP-Analysetyp zugeordnet.");
-        let source: PlannerSource = "openrouter";
-        let analyticsPlan;
-        try {
-          const draft = await OpenRouterAnalyticsPlanner(input.message, input.selectedCantons);
-          analyticsPlan = normalizeAnalyticsPlan(draft, input.message, input.selectedCantons);
-        } catch (error) {
-          if (error instanceof AgentWorkflowError) throw error;
-          source = "fallback";
-          analyticsPlan = createFallbackAnalyticsPlan(input.message);
-        }
-        send({ type: "plan", plan: analyticsPlan.plan, reason: analyticsPlan.reason });
-        stage("planning", "complete", source === "openrouter" ? "Validierter Analyseplan erstellt." : "Sicherer Regel-Fallback erstellt.");
-
-        stage("guard", "running", "Der Analyseplan wird in parameterisiertes Read-only-SQL kompiliert.");
-        const compiled = compileAnalyticsQuery(analyticsPlan, input.selectedCantons);
-        const safeSql = assertSafeSelectQuery(compiled.sql);
-        send({ type: "sql", sql: safeSql, source });
-        stage("guard", "complete", "Query-Template, Tabellen, Spalten und Limit wurden freigegeben.");
-
-        stage("query", "running", "Supabase wertet die passenden Datensätze aus.");
-        let rows;
-        try {
-          rows = await runReadonlyQuery(safeSql, compiled.params);
-        } catch (error) {
-          throw new AgentWorkflowError(queryErrorDetail(error));
-        }
-        send({ type: "data", rowCount: rows.length, columns: rows[0] ? Object.keys(rows[0]) : [] });
-        if (!rows.length) {
-          throw new AgentWorkflowError({
-            code: "NO_DATA",
-            message: "Für diese Kombination aus Frage, Zeitraum und Kantonen wurden keine Daten gefunden.",
-            suggestions: ["Wähle weitere Kantone.", "Erweitere den Zeitraum.", "Prüfe, ob Zuschlagsdaten vorhanden sind."],
-            retryable: false
-          });
-        }
-        stage("query", "complete", `${rows.length} aggregierte Ergebniszeilen geladen.`);
-
-        stage("charts", "running", "DeepSeek und Gemini visualisieren ausschließlich die validierten Ergebnisse.");
-        const commonChartInput = { analyticsPlan, selectedCantons: input.selectedCantons, rows };
-        const chartAPromise = OpenRouterChartAgent({
-          ...commonChartInput, model: CHART_MODEL_A, modelLabel: "DeepSeek V4 Flash",
-          perspective: "Wähle eine klare, managementorientierte Darstellung und priorisiere schnelle Vergleichbarkeit."
-        });
-        const chartBPromise = OpenRouterChartAgent({
-          ...commonChartInput, model: CHART_MODEL_B, modelLabel: "Gemini 3.1 Flash Lite",
-          perspective: "Erzeuge eine kreative Alternative: Treemap für Ranglisten, Area für Zeitreihen oder Pie für kleine Verteilungen."
-        });
-        let chartA;
-        let chartB;
-        const [settledA, settledB] = await Promise.allSettled([chartAPromise, chartBPromise]);
-        if (settledA.status === "fulfilled") {
-          chartA = settledA.value;
-        } else {
-          chartA = { ...ChartAgentA(rows), model: "local-fallback", modelLabel: "Lokaler Fallback (A)" };
-        }
-        if (settledB.status === "fulfilled") {
-          chartB = settledB.value;
-        } else {
-          chartB = { ...ChartAgentB(rows), model: "local-fallback", modelLabel: "Lokaler Fallback (B)" };
-        }
-        if (rows.length > 1 && chartA.chartType === chartB.chartType) {
-          try {
-            chartB = await OpenRouterChartAgent({
-              ...commonChartInput, model: CHART_MODEL_B, modelLabel: "Gemini 3.1 Flash Lite",
-              perspective: "Erzeuge eine fachlich korrekte Alternative zum vorhandenen Diagramm.",
-              forbiddenChartTypes: [chartA.chartType]
-            });
-          } catch {
-            chartB = { ...ChartAgentB(rows), model: "local-fallback", modelLabel: "Lokaler Fallback (B)" };
-          }
-        }
-        const usedFallback = chartA.model === "local-fallback" || chartB.model === "local-fallback";
-        send({ type: "candidate", slot: "chartA", candidate: chartA });
-        send({ type: "candidate", slot: "chartB", candidate: chartB });
-        stage("charts", "complete", usedFallback ? "Diagramme bereit – mindestens ein LLM-Modell war nicht erreichbar, lokale Ersatzdarstellung aktiv." : "Beide Diagrammvorschläge sind bereit.");
-
-        const result: AgentChatResponse = {
-          userMessage: input.message,
-          plan: analyticsPlan.plan,
-          sql: safeSql,
-          reason: analyticsPlan.reason,
-          expectedChartType: analyticsPlan.expectedChartType,
-          source,
-          analyticsPlan,
-          selectedCantons: input.selectedCantons,
-          rows, chartA, chartB,
-          totalLatencyMs: Date.now() - startedAt
-        };
-        send({ type: "complete", result });
+        await runAgentPipeline(
+          { message: input.message, selectedCantons: input.selectedCantons },
+          emit as Parameters<typeof runAgentPipeline>[1]
+        );
       } catch (error) {
-        stage(activeStage, "error");
-        send({ type: "error", stage: activeStage, error: toAgentError(error) });
+        // Sicherheitsnetz: Pipeline fängt eigene Fehler, aber falls hier noch
+        // etwas durchrutscht, nicht den Stream korrumpieren.
+        emit({ type: "error", error: toAgentError(error) });
       } finally {
         controller.close();
       }

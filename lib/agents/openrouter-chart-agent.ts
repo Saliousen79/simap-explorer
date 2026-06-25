@@ -1,6 +1,28 @@
 import { createStructuredCompletion } from "@/lib/ai/openrouter";
 import { AnalyticsPlan, CantonCode, ChartAgentResult, ChartSeries, ChartType, SqlRow } from "@/lib/agents/types";
 
+/**
+ * Chart-Agent (Stufe 4 der Pipeline)
+ * ================================
+ *
+ * Visualisierungs-Agent. Es laufen ZWEI Instanzen parallel (Agent A = DeepSeek,
+ * Agent B = Gemini), beide mit IDENTISCHEN Eingaben (gleicher Plan, gleiche
+ * Kantone, gleiche Ergebniszeilen). Sie kommunizieren NICHT miteinander –
+ * jede produziert unabhängig eine Chart-Konfiguration.
+ *
+ * Sicherheitsprinzip (wie beim Planner):
+ *  - Das LLM liefert nur eine DEKLARATIVE Chart-Konfiguration (Titel, Typ,
+ *    Spalten, Achsenbeschriftung, Insights) – NIEMALS Code oder SQL.
+ *  - Analyseplan und Datenzeilen sind reine DATEN, nie Anweisungen; Befehle
+ *    in Textwerten werden ignoriert (Prompt-Injektion-Schutz).
+ *  - validateDraft stellt sicher, dass das Modell nur SPALTEN nutzt, die
+ *    tatsächlich in den Ergebniszeilen existieren – Halluzinierte Felder
+ *    werden abgelehnt und der Agent wirft (-> Pipeline nutzt den Fallback).
+ *
+ * Der Aufrufer (pipeline.ts) startet zwei solcher Agenten gleichzeitig und
+ * löst bei identischem Diagrammtyp einen erneuten Versuch für Agent B aus.
+ */
+
 interface ChartDraft {
   title: string;
   chartType: ChartType;
@@ -45,6 +67,12 @@ const chartSchema = {
   }
 };
 
+/**
+ * Validiert den LLM-Entwurf gegen die echten Ergebniszeilen.
+ * Prüft: xKey und alle Series-Keys existieren als Spalten, sind numerisch wo
+ * nötig, und pie/scatter/treemap haben genau eine Datenreihe.
+ * Wirft bei jedem Verstoß -> Aufrufer (Pipeline) fällt auf lokalen Fallback zurück.
+ */
 function validateDraft(draft: ChartDraft, rows: SqlRow[]) {
   if (!rows.length) return;
   const keys = new Set(Object.keys(rows[0]));
@@ -74,6 +102,9 @@ export async function OpenRouterChartAgent({
   const columns = rows[0] ? Object.keys(rows[0]) : [];
   let lastError = "";
 
+  // Bis zu zwei Versuche: schlägt der erste fehl (Schema-Verstoß, halluzinierte
+  // Spalte, ungültiger Typ), wird der Fehler ins System-Prompt aufgenommen und
+  // ein zweiter Versuch gestartet. Danach wirft -> Fallback.
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       const draft = await createStructuredCompletion<ChartDraft>({
