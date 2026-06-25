@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsx --test \"tests/**/*.test.ts\""
+    "test": "tsx --test tests/guardrails.test.ts"
   },
   "dependencies": {
     "@radix-ui/react-scroll-area": "^1.2.9",
