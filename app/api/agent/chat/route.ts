@@ -43,6 +43,30 @@ function errorResponse(error: AgentError, status: number) {
   return NextResponse.json({ error }, { status });
 }
 
+function queryErrorDetail(error: unknown): AgentError {
+  const message = error instanceof Error ? error.message : "";
+  console.error("SIMAP query failed", {
+    message,
+    code: typeof error === "object" && error && "code" in error ? String(error.code) : undefined
+  });
+
+  if (message.includes("DATABASE_READONLY_URL")) {
+    return {
+      code: "QUERY_FAILED",
+      message: "Die Datenbank-Verbindung ist auf Vercel nicht konfiguriert.",
+      suggestions: ["Setze DATABASE_READONLY_URL in den Vercel Environment Variables für Production und deploye erneut."],
+      retryable: false
+    };
+  }
+
+  return {
+    code: "QUERY_FAILED",
+    message: "Die freigegebene Supabase-Abfrage konnte nicht ausgeführt werden.",
+    suggestions: ["Versuche es erneut oder reduziere Zeitraum und Kantonsauswahl."],
+    retryable: true
+  };
+}
+
 function assertWithinRateLimit(request: Request) {
   const key = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || request.headers.get("x-real-ip") || "local";
@@ -120,13 +144,8 @@ export async function POST(request: Request) {
         let rows;
         try {
           rows = await runReadonlyQuery(safeSql, compiled.params);
-        } catch {
-          throw new AgentWorkflowError({
-            code: "QUERY_FAILED",
-            message: "Die freigegebene Supabase-Abfrage konnte nicht ausgeführt werden.",
-            suggestions: ["Versuche es erneut oder reduziere Zeitraum und Kantonsauswahl."],
-            retryable: true
-          });
+        } catch (error) {
+          throw new AgentWorkflowError(queryErrorDetail(error));
         }
         send({ type: "data", rowCount: rows.length, columns: rows[0] ? Object.keys(rows[0]) : [] });
         if (!rows.length) {

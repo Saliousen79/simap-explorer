@@ -40,6 +40,7 @@ export default function LoginPage() {
           type="text"
           value={username}
           onChange={(event) => setUsername(event.target.value)}
+          placeholder="Lieblingsschüler_"
           className="mt-2 w-full rounded-2xl border border-border bg-background/70 px-4 py-3 text-base text-foreground outline-none transition focus:border-primary"
           autoComplete="username"
           autoFocus
@@ -50,6 +51,7 @@ export default function LoginPage() {
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
+          placeholder="Note"
           className="mt-2 w-full rounded-2xl border border-border bg-background/70 px-4 py-3 text-base text-foreground outline-none transition focus:border-primary"
           autoComplete="current-password"
         />
