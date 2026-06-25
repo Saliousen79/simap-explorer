@@ -43,10 +43,10 @@ Set these server-side environment variables on Vercel to protect the app with a
 simple password screen:
 
 ```env
-APP_LOGIN_PASSWORD=your-shared-password
 APP_LOGIN_USERNAME=your-login-name
-APP_SESSION_SECRET=your-long-random-session-secret
+APP_LOGIN_PASSWORD=your-shared-password
 ```
 
-When any of these variables is missing, the login gate is disabled for local
-development. Do not prefix these variables with `NEXT_PUBLIC_`.
+When either variable is missing, the login gate is disabled for local
+development. The session cookie stores only a SHA-256 token derived from these
+server-side values. Do not prefix these variables with `NEXT_PUBLIC_`.
