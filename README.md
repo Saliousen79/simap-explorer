@@ -80,6 +80,23 @@ simap-explorer/
 └── .env.example              # Vorlage für Environment-Variablen
 ```
 
+### Dateien im Root erklären
+
+Die Dateien im Wurzelverzeichnis sind die Pflicht-Konfiguration eines
+Next.js-Projekts – sie gehören dort hin und werden nicht verschoben:
+
+| Datei | Rolle |
+|-------|-------|
+| `package.json` / `package-lock.json` | Abhängigkeiten und lockfile (npm) |
+| `tsconfig.json` | TypeScript-Konfiguration & Pfad-Aliase `@/*` |
+| `next.config.mjs` | Next.js-Konfiguration |
+| `next-env.d.ts` | Von Next.js auto-generiert (nicht manuell ändern) |
+| `middleware.ts` | Login-Gate-Middleware |
+| `tailwind.config.ts` / `postcss.config.mjs` | Tailwind-CSS-Setup |
+| `.eslintrc.json` | Linting-Regeln (`npm run lint`) |
+| `.gitignore` / `.env.example` | Git- bzw. Environment-Vorlagen |
+| `README.md` / `AGENTS.md` / `LICENSE` | Doku, Projektauftrag, Lizenz |
+
 ---
 
 ## Schnellstart
