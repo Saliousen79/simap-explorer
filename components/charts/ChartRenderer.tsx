@@ -86,42 +86,51 @@ function usesHorizontalBars(chart: ChartAgentResult) {
 }
 
 function TreemapCell(props: any) {
-  const { x, y, width, height, root, depth, payload, xKey, valueKey } = props as {
+  const { x, y, width, height, root, depth, payload, xKey, valueKey, index, name: propName, value: propValue } = props as {
     x: number; y: number; width: number; height: number;
     root: any; depth?: number; payload: SqlRow | undefined; xKey: string; valueKey: string;
+    index?: number; name?: string | number; value?: string | number;
   };
   if (!root || depth == null) return null;
-  const isTooSmall = width < 36 || height < 22;
-  const name = String(payload?.[xKey] ?? "");
-  const value = formatCell(payload?.[valueKey], valueKey);
   const safeWidth = Math.max(width, 0);
   const safeHeight = Math.max(height, 0);
+  if (safeWidth <= 0 || safeHeight <= 0) return null;
+
+  const cellData = payload ?? props;
+  const rawName = cellData?.[xKey] ?? propName ?? cellData?.name ?? "";
+  const rawValue = cellData?.[valueKey] ?? propValue ?? cellData?.value;
+  const name = String(rawName);
+  const value = formatCell(rawValue, valueKey);
+  const isTooSmall = safeWidth < 52 || safeHeight < 30;
 
   const baseFont = Math.min(safeWidth / 14, safeHeight / 6, 14);
   const nameFont = Math.max(Math.min(baseFont, isTooSmall ? 9 : 13), 8);
   const valueFont = Math.max(nameFont - 3, 8);
 
   const siblings = (root && root.children) || [];
-  const index = siblings.findIndex((c: any) => c === props);
-  const fill = TREEMAP_PALETTE[Math.max(index, 0) % TREEMAP_PALETTE.length];
+  const fallbackIndex = siblings.findIndex((child: any) => child?.name === propName || child?.[xKey] === rawName);
+  const colorIndex = typeof index === "number" ? index : fallbackIndex;
+  const fill = TREEMAP_PALETTE[Math.max(colorIndex, 0) % TREEMAP_PALETTE.length];
 
-  const maxNameChars = Math.max(Math.floor((safeWidth - 24) / (nameFont * 0.55)), 4);
-  const displayName = name.length * nameFont * 0.55 > safeWidth - 16 ? name.slice(0, maxNameChars) + "…" : name;
+  const maxNameChars = Math.max(Math.floor((safeWidth - 20) / (nameFont * 0.55)), 3);
+  const displayName = name.length > maxNameChars ? `${name.slice(0, maxNameChars)}...` : name;
+  const maxValueChars = Math.max(Math.floor((safeWidth - 20) / (valueFont * 0.55)), 4);
+  const displayValue = value.length > maxValueChars ? `${value.slice(0, maxValueChars)}...` : value;
 
   return (
     <g>
       <rect x={x} y={y} width={safeWidth} height={safeHeight} fill={fill} fillOpacity={0.92} stroke="#0f172a" strokeWidth={2} />
       {isTooSmall ? (
-        <text x={x + safeWidth / 2} y={y + safeHeight / 2} dx={0} dy={nameFont / 3} textAnchor="middle" fill="#0b1220" fontSize={nameFont} fontWeight={700}>
-          {String(name).slice(0, 3)}.
+        <text x={x + safeWidth / 2} y={y + safeHeight / 2} dy={nameFont / 3} textAnchor="middle" fill="#082f49" fontSize={nameFont} fontWeight={800} pointerEvents="none">
+          {name.slice(0, 4)}
         </text>
       ) : (
         <>
-          <text x={x + 8} y={y + nameFont + 8} fill="#0b1220" fontSize={nameFont} fontWeight={700}>
+          <text x={x + 10} y={y + nameFont + 8} fill="#082f49" fontSize={nameFont} fontWeight={800} pointerEvents="none">
             {displayName}
           </text>
-          <text x={x + 8} y={y + nameFont + valueFont + 12} fill="#0b1220" fontSize={valueFont} opacity={0.85}>
-            {value}
+          <text x={x + 10} y={y + nameFont + valueFont + 14} fill="#0f172a" fontSize={valueFont} fontWeight={700} opacity={0.82} pointerEvents="none">
+            {displayValue}
           </text>
         </>
       )}
