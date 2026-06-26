@@ -5,6 +5,7 @@ const LIMITS: Record<AnalyticsPlan["intent"], number> = {
   trend: 240,
   winner_ranking: 50,
   office_ranking: 50,
+  order_type_analysis: 30,
   procedure_comparison: 30,
   cpv_analysis: 50,
   current_projects: 100,
@@ -55,6 +56,9 @@ export function compileAnalyticsQuery(plan: AnalyticsPlan, selectedCantons: Cant
       break;
     case "office_ranking":
       sql = `SELECT proc_office_name_de, COUNT(id)::int AS contract_count, COALESCE(SUM(award_amount), 0)::numeric AS total_award_amount\nFROM ${table}${buildWhere(plan, selectedCantons, params, ["proc_office_name_de IS NOT NULL"])}\nGROUP BY proc_office_name_de\nORDER BY ${orderMetric(plan, ["contract_count", "total_award_amount"], "contract_count")} DESC\nLIMIT ${limit}`;
+      break;
+    case "order_type_analysis":
+      sql = `SELECT order_type, COUNT(id)::int AS contract_count, COALESCE(SUM(award_amount), 0)::numeric AS total_award_amount\nFROM ${table}${buildWhere(plan, selectedCantons, params, ["order_type IS NOT NULL"])}\nGROUP BY order_type\nORDER BY ${orderMetric(plan, ["contract_count", "total_award_amount"], "contract_count")} DESC\nLIMIT ${limit}`;
       break;
     case "procedure_comparison":
       sql = `SELECT process_type, COUNT(id)::int AS contract_count, ROUND(AVG(number_of_submissions), 2)::numeric AS avg_submissions\nFROM ${table}${buildWhere(plan, selectedCantons, params, ["process_type IS NOT NULL"])}\nGROUP BY process_type\nORDER BY ${orderMetric(plan, ["contract_count", "avg_submissions"], "contract_count")} DESC\nLIMIT ${limit}`;

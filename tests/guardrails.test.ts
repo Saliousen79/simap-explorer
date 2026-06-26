@@ -96,6 +96,23 @@ test("relative time like 'letzte 6 Jahre' produces a date predicate and stays wi
   assert.equal(assertSafeSelectQuery(query.sql), query.sql);
 });
 
+test("order type questions group by order_type and keep relative year bounds", () => {
+  const plan = createFallbackAnalyticsPlan("Welche Auftragsarten waren die Beliebtesten in den letzten 4 Jahren?");
+  const query = compileAnalyticsQuery(plan, ["AG", "BS", "BL", "ZH"]);
+  const currentYear = new Date().getFullYear();
+
+  assert.equal(plan.intent, "order_type_analysis");
+  assert.deepEqual(plan.dimensions, ["order_type"]);
+  assert.equal(plan.filters.yearFrom, currentYear - 4 + 1);
+  assert.equal(plan.filters.yearTo, currentYear);
+  assert.match(query.sql, /SELECT order_type, COUNT\(id\)::int AS contract_count/);
+  assert.match(query.sql, /publication_date >= \$/);
+  assert.match(query.sql, /publication_date < \$/);
+  assert.match(query.sql, /canton = ANY\(\$3::text\[\]\)/);
+  assert.doesNotMatch(query.sql, /GROUP BY canton/);
+  assert.equal(assertSafeSelectQuery(query.sql), query.sql);
+});
+
 test("'seit 5 Jahren' produces a date predicate spanning 6 calendar years", () => {
   const plan = createFallbackAnalyticsPlan("Gewinner seit 5 Jahren");
   const query = compileAnalyticsQuery(plan, ["BS"]);

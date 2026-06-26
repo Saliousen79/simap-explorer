@@ -13,6 +13,7 @@ export const analyticsIntentSchema = z.enum([
   "trend",
   "winner_ranking",
   "office_ranking",
+  "order_type_analysis",
   "procedure_comparison",
   "cpv_analysis",
   "current_projects",
@@ -22,7 +23,7 @@ export type AnalyticsIntent = z.infer<typeof analyticsIntentSchema>;
 
 export const analyticsDimensionSchema = z.enum([
   "month", "quarter", "year", "canton", "winner_name", "proc_office_name_de",
-  "process_type", "cpv_code_main", "publication_date", "title_de", "submission_deadline"
+  "order_type", "process_type", "cpv_code_main", "publication_date", "title_de", "submission_deadline"
 ]);
 export type AnalyticsDimension = z.infer<typeof analyticsDimensionSchema>;
 

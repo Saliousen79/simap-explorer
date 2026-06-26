@@ -34,9 +34,9 @@ const plannerSchema = {
   properties: {
     supported: { type: "boolean" },
     unsupportedReason: { type: "string", maxLength: 240 },
-    intent: { type: "string", enum: ["trend", "winner_ranking", "office_ranking", "procedure_comparison", "cpv_analysis", "current_projects", "canton_comparison"] },
+    intent: { type: "string", enum: ["trend", "winner_ranking", "office_ranking", "order_type_analysis", "procedure_comparison", "cpv_analysis", "current_projects", "canton_comparison"] },
     table: { type: "string", enum: ["public.archive", "public.projects"] },
-    dimensions: { type: "array", minItems: 1, maxItems: 3, items: { type: "string", enum: ["month", "quarter", "year", "canton", "winner_name", "proc_office_name_de", "process_type", "cpv_code_main", "publication_date", "title_de", "submission_deadline"] } },
+    dimensions: { type: "array", minItems: 1, maxItems: 3, items: { type: "string", enum: ["month", "quarter", "year", "canton", "winner_name", "proc_office_name_de", "order_type", "process_type", "cpv_code_main", "publication_date", "title_de", "submission_deadline"] } },
     metrics: { type: "array", maxItems: 3, items: { type: "string", enum: ["contract_count", "award_count", "total_award_amount", "avg_award_amount", "avg_submissions", "single_bid_ratio"] } },
     filters: {
       type: "object",
@@ -81,6 +81,7 @@ Erlaubte Analysen:
 - trend: Entwicklung nach Monat, Quartal oder Jahr
 - winner_ranking: Gewinner nach Anzahl Zuschlägen oder dokumentiertem Volumen
 - office_ranking: Vergabestellen nach Aktivität oder Volumen
+- order_type_analysis: Auftragsarten nach Anzahl oder dokumentiertem Volumen
 - procedure_comparison: Verfahren und durchschnittliche Angebotsanzahl
 - cpv_analysis: Branchenanalyse über CPV
 - current_projects: aktuelle oder offene Projekte

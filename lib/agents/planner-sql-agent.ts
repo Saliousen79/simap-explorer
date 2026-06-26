@@ -12,6 +12,7 @@ const INTENT_LIMITS: Record<AnalyticsIntent, number> = {
   trend: 240,
   winner_ranking: 15,
   office_ranking: 15,
+  order_type_analysis: 20,
   procedure_comparison: 20,
   cpv_analysis: 20,
   current_projects: 20,
@@ -81,6 +82,7 @@ function detectIntent(prompt: string): AnalyticsIntent | null {
   if (includesAny(text, ["trend", "entwicklung", "zeitreihe", "monat", "quartal", "jahrlich", "jährlich"])) return "trend";
   if (includesAny(text, ["gewinner", "gewonn", "winner", "anbieter", "auftragnehmer", "zuschlagsempfanger", "unternehmen", "firma", "firmen"])) return "winner_ranking";
   if (includesAny(text, ["auftraggeber", "vergabestelle", "beschaffungsstelle"])) return "office_ranking";
+  if (includesAny(text, ["auftragsart", "auftragsarten", "auftragstyp", "auftragstypen", "order type", "order types"])) return "order_type_analysis";
   if (includesAny(text, ["verfahren", "procedure", "angebot", "submission"])) return "procedure_comparison";
   if (includesAny(text, ["cpv", "branche", "kategorie", "sektor"])) return "cpv_analysis";
   if (includesAny(text, ["kanton", "kantone", "vergabe", "ausschreibung", "simap", "auftrag", "volumen"])) return "canton_comparison";
@@ -92,6 +94,7 @@ function defaultsFor(intent: AnalyticsIntent) {
     case "trend": return { dimensions: ["month"] as const, metrics: ["contract_count", "total_award_amount"] as const, chart: "line" as const };
     case "winner_ranking": return { dimensions: ["winner_name"] as const, metrics: ["award_count"] as const, chart: "bar" as const };
     case "office_ranking": return { dimensions: ["proc_office_name_de"] as const, metrics: ["contract_count", "total_award_amount"] as const, chart: "bar" as const };
+    case "order_type_analysis": return { dimensions: ["order_type"] as const, metrics: ["contract_count", "total_award_amount"] as const, chart: "bar" as const };
     case "procedure_comparison": return { dimensions: ["process_type"] as const, metrics: ["contract_count", "avg_submissions"] as const, chart: "bar" as const };
     case "cpv_analysis": return { dimensions: ["cpv_code_main"] as const, metrics: ["contract_count", "total_award_amount"] as const, chart: "treemap" as const };
     case "current_projects": return { dimensions: ["publication_date", "title_de", "submission_deadline"] as const, metrics: [] as const, chart: "table" as const };
