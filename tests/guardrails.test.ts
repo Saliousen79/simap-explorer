@@ -33,6 +33,22 @@ test("winner ranking sorts by won awards unless money is the explicit sort key",
   assert.doesNotMatch(query.sql, /SUM\(award_amount\)/);
 });
 
+test("winner ranking uses award amount when prompt asks for volume", () => {
+  const plan = createFallbackAnalyticsPlan("Welche Unternehmen haben das höchste Auftragsvolumen in den letzten 5 Jahren gehabt?");
+  const query = compileAnalyticsQuery(plan, ["SO", "AG", "ZH", "BL", "BS"]);
+  const currentYear = new Date().getFullYear();
+
+  assert.equal(plan.intent, "winner_ranking");
+  assert.deepEqual(plan.metrics, ["total_award_amount", "award_count"]);
+  assert.equal(plan.sort.key, "total_award_amount");
+  assert.equal(plan.filters.yearFrom, currentYear - 5 + 1);
+  assert.match(query.sql, /SUM\(award_amount\)/);
+  assert.match(query.sql, /award_amount IS NOT NULL/);
+  assert.match(query.sql, /ORDER BY total_award_amount DESC/);
+  assert.doesNotMatch(query.sql, /ORDER BY award_count DESC/);
+  assert.equal(assertSafeSelectQuery(query.sql), query.sql);
+});
+
 test("whole Switzerland adds no canton predicate", () => {
   const plan = createFallbackAnalyticsPlan("Zeige den monatlichen Trend 2021");
   const query = compileAnalyticsQuery(plan, []);

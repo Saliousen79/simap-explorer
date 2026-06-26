@@ -52,7 +52,7 @@ export function compileAnalyticsQuery(plan: AnalyticsPlan, selectedCantons: Cant
       sql = `SELECT ${timeDimension(plan)}, COUNT(id)::int AS contract_count, COALESCE(SUM(award_amount), 0)::numeric AS total_award_amount\nFROM ${table}${buildWhere(plan, selectedCantons, params)}\nGROUP BY period\nORDER BY period ASC\nLIMIT ${limit}`;
       break;
     case "winner_ranking":
-      sql = `SELECT winner_name, COUNT(id)::int AS award_count${needsAwardAmount ? ", COALESCE(SUM(award_amount), 0)::numeric AS total_award_amount" : ""}\nFROM ${table}${buildWhere(plan, selectedCantons, params, ["winner_name IS NOT NULL"])}\nGROUP BY winner_name\nORDER BY ${orderMetric(plan, ["award_count", "total_award_amount"], "award_count")} DESC\nLIMIT ${limit}`;
+      sql = `SELECT winner_name, COUNT(id)::int AS award_count${needsAwardAmount ? ", COALESCE(SUM(award_amount), 0)::numeric AS total_award_amount" : ""}\nFROM ${table}${buildWhere(plan, selectedCantons, params, ["winner_name IS NOT NULL", ...(needsAwardAmount ? ["award_amount IS NOT NULL"] : [])])}\nGROUP BY winner_name\nORDER BY ${orderMetric(plan, ["award_count", "total_award_amount"], "award_count")} DESC\nLIMIT ${limit}`;
       break;
     case "office_ranking":
       sql = `SELECT proc_office_name_de, COUNT(id)::int AS contract_count, COALESCE(SUM(award_amount), 0)::numeric AS total_award_amount\nFROM ${table}${buildWhere(plan, selectedCantons, params, ["proc_office_name_de IS NOT NULL"])}\nGROUP BY proc_office_name_de\nORDER BY ${orderMetric(plan, ["contract_count", "total_award_amount"], "contract_count")} DESC\nLIMIT ${limit}`;

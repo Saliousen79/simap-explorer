@@ -1,5 +1,5 @@
 import { AgentWorkflowError } from "@/lib/security/prompt-guard";
-import { AnalyticsIntent, AnalyticsPlan, CantonCode } from "@/lib/agents/types";
+import { AnalyticsIntent, AnalyticsMetric, AnalyticsPlan, CantonCode } from "@/lib/agents/types";
 
 const PLAN = [
   "Frage einem erlaubten SIMAP-Analysetyp zuordnen",
@@ -76,6 +76,24 @@ export function wantsCantonComparison(prompt: string) {
   return includesAny(text, ["vergleich", "vergleiche", "gegenuber", "je kanton", "nach kanton", "zwischen den kantonen"]);
 }
 
+function wantsAwardAmount(prompt: string) {
+  const text = normalized(prompt);
+  return includesAny(text, [
+    "auftragsvolumen",
+    "volumen",
+    "betrag",
+    "summe",
+    "wert",
+    "chf",
+    "franken",
+    "geld",
+    "teuer",
+    "hochste auftragsvolumen",
+    "hochstes auftragsvolumen",
+    "meistes auftragsvolumen"
+  ]);
+}
+
 function detectIntent(prompt: string): AnalyticsIntent | null {
   const text = normalized(prompt);
   if (includesAny(text, ["aktuell", "offen", "neueste", "projekt", "frist"])) return "current_projects";
@@ -102,6 +120,22 @@ function defaultsFor(intent: AnalyticsIntent) {
   }
 }
 
+function metricsForPrompt(intent: AnalyticsIntent, userPrompt: string): AnalyticsMetric[] {
+  if (!wantsAwardAmount(userPrompt)) return [...defaultsFor(intent).metrics];
+
+  switch (intent) {
+    case "winner_ranking":
+      return ["total_award_amount", "award_count"];
+    case "office_ranking":
+    case "order_type_analysis":
+    case "cpv_analysis":
+    case "canton_comparison":
+      return ["total_award_amount", "contract_count"];
+    default:
+      return [...defaultsFor(intent).metrics];
+  }
+}
+
 export function createFallbackAnalyticsPlan(userPrompt: string): AnalyticsPlan {
   const intent = detectIntent(userPrompt);
   if (!intent) {
@@ -116,19 +150,20 @@ export function createFallbackAnalyticsPlan(userPrompt: string): AnalyticsPlan {
   const defaults = defaultsFor(intent);
   const years = extractYears(userPrompt);
   const text = normalized(userPrompt);
+  const metrics = metricsForPrompt(intent, userPrompt);
   return {
     supported: true,
     unsupportedReason: "",
     intent,
     table: intent === "current_projects" ? "public.projects" : "public.archive",
     dimensions: [...defaults.dimensions],
-    metrics: [...defaults.metrics],
+    metrics,
     filters: {
       ...years,
       dateField: includesAny(text, ["zuschlagsdatum", "entscheidungsdatum", "zuschlagsjahr"]) ? "award_decision_date" : "publication_date",
       orderTypes: [], processTypes: [], pubTypes: []
     },
-    sort: { key: defaults.metrics[0] ?? "publication_date", direction: intent === "trend" ? "asc" : "desc" },
+    sort: { key: metrics[0] ?? "publication_date", direction: intent === "trend" ? "asc" : "desc" },
     limit: INTENT_LIMITS[intent],
     plan: PLAN,
     reason: "Die Frage wurde einem freigegebenen SIMAP-Analysetyp zugeordnet.",
@@ -153,6 +188,7 @@ export function normalizeAnalyticsPlan(draft: AnalyticsPlan, userPrompt: string,
   const defaults = defaultsFor(intent);
   const years = extractYears(userPrompt);
   const timeDimension = draft.dimensions.find((item) => item === "month" || item === "quarter" || item === "year");
+  const metrics = metricsForPrompt(intent, userPrompt);
 
   return {
     ...fallback,
@@ -160,13 +196,13 @@ export function normalizeAnalyticsPlan(draft: AnalyticsPlan, userPrompt: string,
     intent,
     table: intent === "current_projects" ? "public.projects" : "public.archive",
     dimensions: intent === "trend" && timeDimension ? [timeDimension] : [...defaults.dimensions],
-    metrics: [...defaults.metrics],
+    metrics,
     filters: {
       ...fallback.filters,
       ...years,
       orderTypes: [], processTypes: [], pubTypes: []
     },
-    sort: { key: defaults.metrics[0] ?? "publication_date", direction: intent === "trend" ? "asc" : "desc" },
+    sort: { key: metrics[0] ?? "publication_date", direction: intent === "trend" ? "asc" : "desc" },
     limit: Math.min(draft.limit, INTENT_LIMITS[intent]),
     plan: draft.plan,
     reason: draft.reason,
