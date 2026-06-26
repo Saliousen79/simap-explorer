@@ -36,6 +36,7 @@ export interface StructuredCompletionOptions {
   schema: Record<string, unknown>;
   temperature?: number;
   maxTokens?: number;
+  timeoutMs?: number;
 }
 
 /** Hat der Server einen OpenRouter-Key konfiguriert? (für Feature-Checks) */
@@ -54,7 +55,8 @@ export async function createStructuredCompletion<T>({
   schemaName,
   schema,
   temperature = 0.2,
-  maxTokens = 1800
+  maxTokens = 1800,
+  timeoutMs = 30_000
 }: StructuredCompletionOptions): Promise<T> {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) {
@@ -85,7 +87,7 @@ export async function createStructuredCompletion<T>({
         json_schema: { name: schemaName, strict: true, schema }
       }
     }),
-    signal: AbortSignal.timeout(30_000) // harte 30s-Grenze, damit Vercel-60s nicht voll ausgeschöpft werden
+    signal: AbortSignal.timeout(timeoutMs) // harte 30s-Grenze, damit Vercel-60s nicht voll ausgeschöpft werden
   });
 
   const payload = (await response.json()) as OpenRouterResponse;
