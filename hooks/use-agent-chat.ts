@@ -74,15 +74,28 @@ export function useAgentChat() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let sawTerminalEvent = false;
+      const handleStreamEvent = (event: AgentStreamEvent) => {
+        if (event.type === "complete" || event.type === "error") sawTerminalEvent = true;
+        updateWorkflow(event);
+      };
       while (true) {
         const { done, value } = await reader.read();
         buffer += decoder.decode(value, { stream: !done });
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
-        for (const line of lines) if (line.trim()) updateWorkflow(JSON.parse(line) as AgentStreamEvent);
+        for (const line of lines) if (line.trim()) handleStreamEvent(JSON.parse(line) as AgentStreamEvent);
         if (done) break;
       }
-      if (buffer.trim()) updateWorkflow(JSON.parse(buffer) as AgentStreamEvent);
+      if (buffer.trim()) handleStreamEvent(JSON.parse(buffer) as AgentStreamEvent);
+      if (!sawTerminalEvent) {
+        updateWorkflow({ type: "error", error: {
+          code: "MODEL_UNAVAILABLE",
+          message: "Die Analyse wurde vor dem Abschluss unterbrochen.",
+          suggestions: ["Versuche es erneut. Die Abfrage wird beim nÃ¤chsten Lauf neu gestartet."],
+          retryable: true
+        } });
+      }
     } catch (error) {
       updateWorkflow({ type: "error", error: {
         code: "MODEL_UNAVAILABLE",
